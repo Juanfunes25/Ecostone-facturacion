@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "test": "node --test test/"
+    "test": "node --test test/cotizacion.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
