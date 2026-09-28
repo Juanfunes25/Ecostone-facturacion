@@ -12,7 +12,7 @@ const PARAM_TEXTO = {
   descuento_max_vendedor_pct: 'Tope de descuento — vendedor (%)', descuento_max_gerente_pct: 'Tope de descuento — gerente (%)', coladas_por_molde_dia: 'Coladas por molde por día', isv_tasa: 'Tasa de ISV',
 };
 
-export default function Fabricacion({ session, perfil }) {
+export default function Fabricacion({ session, perfil, onIrA }) {
   const [pestana, setPestana] = useState('tablero');
   const [resumen, setResumen] = useState(null);
   const [agenda, setAgenda] = useState([]);
@@ -39,7 +39,7 @@ export default function Fabricacion({ session, perfil }) {
   }
   useEffect(() => { cargar().catch((e) => setError(e.message)); }, [filtroEstado]);
 
-  const ok = (m) => { setAviso(m); setTimeout(() => setAviso(''), 6000); };
+  const ok = (m) => { setAviso(m); setTimeout(() => setAviso(''), 12000); };
   async function accion(fn, mensaje) {
     setError('');
     try {
@@ -61,7 +61,7 @@ export default function Fabricacion({ session, perfil }) {
     const faltan = x.fecha_disponible && x.fecha_disponible > hoyIso();
     const msg = `${x.lote}: ${num(x.m2_planificado, 2)} de ${x.productos?.nombre}.\n${faltan ? `Todavía está en secado hasta el ${fechaCorta(x.fecha_disponible)}. ` : ''}¿Pasarla ahora a "Lista para vender" y sumarla al inventario?`;
     if (!window.confirm(msg)) return cargar();
-    await accion(() => api.post(`/fabricacion/ordenes/${x.id}/terminar`, session, {}), 'Lista para vender: ya está en el inventario.');
+    await accion(() => api.post(`/fabricacion/ordenes/${x.id}/terminar`, session, {}), `Lista para vender: ${num(x.m2_planificado, 2)} de ${x.productos?.nombre} ya están en el Inventario de piedra.`);
   }
   async function refrescarDetalle() { if (detalle) await abrirDetalle(detalle.orden.id); await cargar(); }
 
@@ -70,7 +70,7 @@ export default function Fabricacion({ session, perfil }) {
   return (
     <div>
       {error && <div className="error" onClick={() => setError('')}>{error}</div>}
-      {aviso && <div className="aviso-ok" onClick={() => setAviso('')}>{aviso}</div>}
+      {aviso && <div className="aviso-ok">{aviso} {/inventario/i.test(aviso) && onIrA && <button className="boton-sm" onClick={() => onIrA('inventario')}>Ver en inventario</button>} <button className="boton-sm boton-secundario" onClick={() => setAviso('')}>Cerrar</button></div>}
       {resumen && (
         <Kpis items={[
           { titulo: 'Por colar', valor: String(resumen.planificadas), pie: resumen.atrasadas ? `${resumen.atrasadas} atrasadas` : 'al día' },

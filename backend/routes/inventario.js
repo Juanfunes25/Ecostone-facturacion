@@ -17,9 +17,10 @@ const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ er
 inventario.get('/pt', requireRole(...LEE), async (req, res) => {
   try {
     await liberarCuradosVencidos().catch(() => {});
-    const [filas, { data: productos }] = await Promise.all([
+    const [filas, { data: productos }, { data: secando }] = await Promise.all([
       traerTodo(() => db.from('stock_pt').select('*').order('producto_id')),
-      db.from('productos').select('id, nombre, modelo, color, m2_por_caja, stock_minimo_m2, costo_estandar, tipo').eq('tipo', 'piedra').eq('activo', true).order('nombre'),
+      db.from('productos').select('id, nombre, modelo, color, unidad_venta, m2_por_caja, stock_minimo_m2, costo_estandar, tipo').eq('tipo', 'piedra').eq('activo', true).order('nombre'),
+      db.from('ordenes_produccion').select('producto_id, lote, m2_planificado, fecha_disponible').eq('estado', 'curando'),
     ]);
     const verCostos = ['admin', 'gerente'].includes(req.perfil.rol);
     res.json(
@@ -27,8 +28,13 @@ inventario.get('/pt', requireRole(...LEE), async (req, res) => {
         const lotes = filas.filter((f) => f.producto_id === p.id && (Number(f.fisico) !== 0 || Number(f.disponible) !== 0));
         const suma = (calidad, campo) => round3(lotes.filter((l) => l.calidad === calidad).reduce((s, l) => s + Number(l[campo]), 0));
         const disponible = suma('primera', 'disponible');
+        const enSecado = (secando ?? []).filter((o) => o.producto_id === p.id);
         return {
           ...p,
+          unidad: p.unidad_venta === 'caja' ? 'cajas' : 'm²',
+          esquina: p.unidad_venta === 'caja',
+          en_secado: round3(enSecado.reduce((s, o) => s + Number(o.m2_planificado), 0)),
+          lotes_secado: enSecado.map((o) => ({ lote: o.lote, cantidad: Number(o.m2_planificado), lista_el: o.fecha_disponible })),
           costo_estandar: verCostos ? p.costo_estandar : undefined,
           fisico_primera: suma('primera', 'fisico'),
           disponible_primera: disponible,
