@@ -4,7 +4,12 @@ import { api } from './api.js';
 import { colorSucursal, nombreCortoSucursal, registrarColoresSucursales } from './lib/coloresSucursal.js';
 import Pos from './screens/Pos.jsx';
 import Facturas from './screens/Facturas.jsx';
-import Catalogo from './screens/Catalogo.jsx';
+import Piedra from './screens/Piedra.jsx';
+import Cotizaciones from './screens/Cotizaciones.jsx';
+import Fabricacion from './screens/Fabricacion.jsx';
+import Recetas from './screens/Recetas.jsx';
+import Insumos from './screens/Insumos.jsx';
+import Inventario from './screens/Inventario.jsx';
 import Clientes from './screens/Clientes.jsx';
 import Usuarios from './screens/Usuarios.jsx';
 import Cierres from './screens/Cierres.jsx';
@@ -87,23 +92,28 @@ function PantallaLogin({ onEntrar }) {
 }
 
 const PANTALLAS = [
-  { id: 'pos', etiqueta: 'Facturación', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Pos },
+  { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero'], Componente: Cotizaciones },
+  { id: 'pos', etiqueta: 'Venta de mostrador', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Pos },
   { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Facturas },
   { id: 'cierres', etiqueta: 'Cierre de caja', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Cierres },
+  { id: 'produccion', etiqueta: 'Producción', grupo: 'Fabricación', roles: ['admin', 'gerente', 'produccion', 'bodega'], Componente: Fabricacion },
+  { id: 'recetas', etiqueta: 'Recetas y costos', grupo: 'Fabricación', roles: ['admin', 'gerente', 'produccion'], Componente: Recetas },
+  { id: 'insumos', etiqueta: 'Insumos', grupo: 'Fabricación', roles: ['admin', 'gerente', 'produccion', 'bodega'], Componente: Insumos },
+  { id: 'inventario', etiqueta: 'Inventario de piedra', grupo: 'Fabricación', roles: ['admin', 'gerente', 'produccion', 'bodega', 'vendedor'], Componente: Inventario },
   { id: 'dashboard', etiqueta: 'Dashboard', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Dashboard },
   { id: 'reportes', etiqueta: 'Reportes', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Reportes },
-  { id: 'catalogo', etiqueta: 'Catálogo', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Catalogo },
-  { id: 'clientes', etiqueta: 'Clientes', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Clientes },
+  { id: 'catalogo', etiqueta: 'Catálogo de piedra', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor'], Componente: Piedra },
+  { id: 'clientes', etiqueta: 'Clientes', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor'], Componente: Clientes },
   { id: 'caja-chica', etiqueta: 'Caja chica', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: CajaChica },
   { id: 'antifraude', etiqueta: 'Antifraude', grupo: 'Control', roles: ['admin'], Componente: Antifraude },
   { id: 'bitacora', etiqueta: 'Bitácora', grupo: 'Control', roles: ['admin'], Componente: Bitacora },
   { id: 'puntos-emision', etiqueta: 'CAI / Emisión', grupo: 'Control', roles: ['admin', 'gerente'], Componente: PuntosEmision },
   { id: 'usuarios', etiqueta: 'Usuarios', grupo: 'Control', roles: ['admin'], Componente: Usuarios },
-  { id: 'sucursales', etiqueta: 'Sucursales', grupo: 'Control', roles: ['admin'], Componente: Sucursales },
+  { id: 'sucursales', etiqueta: 'Planta / sucursal', grupo: 'Control', roles: ['admin'], Componente: Sucursales },
   { id: 'impresora', etiqueta: 'Impresora', grupo: 'Ajustes', roles: ['admin', 'gerente', 'cajero'], Componente: Impresora },
 ];
 
-const GRUPOS = ['Operación', 'Negocio', 'Control', 'Ajustes'];
+const GRUPOS = ['Operación', 'Fabricación', 'Negocio', 'Control', 'Ajustes'];
 
 // Preferencias visuales por computadora (tema y barra lateral compacta).
 function leerPreferencia(clave, porDefecto) {
@@ -387,7 +397,7 @@ function PantallaApp({ session, onSalir }) {
             <span className="sidebar-avatar">{(perfil.nombre ?? '?').trim().slice(0, 1).toUpperCase()}</span>
             <span className="sidebar-usuario-texto">
               <strong>{perfil.nombre}</strong>
-              <small>{{ admin: 'Administrador', manager: 'Manager', cajero: 'Cajero' }[perfil.rol] ?? perfil.rol}</small>
+              <small>{{ admin: 'Administrador', gerente: 'Gerente', vendedor: 'Vendedor', cajero: 'Cajero', bodega: 'Bodega / despacho', produccion: 'Producción' }[perfil.rol] ?? perfil.rol}</small>
             </span>
             <button className="boton-icono" onClick={salir} title="Cerrar sesión" aria-label="Cerrar sesión">
               <Icono nombre="salir" tam={18} />

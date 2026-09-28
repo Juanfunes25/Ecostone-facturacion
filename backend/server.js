@@ -19,6 +19,11 @@ import { facturaImpresion } from './routes/facturaImpresion.js';
 import { sucursales } from './routes/sucursales.js';
 import { dashboard } from './routes/dashboard.js';
 import { auditoria } from './routes/auditoria.js';
+import { insumos } from './routes/insumos.js';
+import { fabricacion } from './routes/fabricacion.js';
+import { inventario } from './routes/inventario.js';
+import { cotizaciones } from './routes/cotizaciones.js';
+import { catalogoFabrica } from './routes/catalogoFabrica.js';
 import { antifraude } from './routes/antifraude.js';
 import { requireRole } from './middleware/requireRole.js';
 import { iniciarVigilancia, registrarLoginFallido } from './lib/antifraude.js';
@@ -82,6 +87,11 @@ app.use('/api/caja-chica', requireRole('admin', 'gerente'), cajaChica);
 app.use('/api/usuarios', usuarios);
 app.use('/api/dashboard', requireRole('admin', 'gerente'), dashboard);
 app.use('/api/auditoria', auditoria);
+app.use('/api/insumos', insumos);
+app.use('/api/fabricacion', fabricacion);
+app.use('/api/inventario', inventario);
+app.use('/api/cotizaciones', cotizaciones);
+app.use('/api', catalogoFabrica);
 app.use('/api/antifraude', antifraude);
 
 // Sirve el build del frontend (un solo servicio Render, backend + frontend estático).

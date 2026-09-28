@@ -25,13 +25,14 @@ clientes.get('/', async (req, res) => {
 
 clientes.post('/', async (req, res) => {
   const { nombre, rtn, direccion, telefono, email, exento_impuestos } = req.body;
+  const fab = { tipo_cliente: req.body.tipo_cliente ?? 'final', lista_precio_id: req.body.lista_precio_id || null, limite_credito: Number(req.body.limite_credito) || 0, dias_credito: Number(req.body.dias_credito) || 0 };
   if (!nombre) return res.status(400).json({ error: 'nombre es obligatorio' });
   if (!rtnLuceValido(rtn)) {
     return res.status(400).json({ error: 'El RTN hondureño debe tener 13-14 dígitos — revísalo.' });
   }
   const { data, error } = await db
     .from('clientes')
-    .insert({ nombre, rtn, direccion, telefono, email, exento_impuestos: !!exento_impuestos })
+    .insert({ nombre, rtn, direccion, telefono, email, exento_impuestos: !!exento_impuestos, ...fab })
     .select()
     .single();
   if (error) return res.status(500).json({ error: error.message });
@@ -40,12 +41,14 @@ clientes.post('/', async (req, res) => {
 
 clientes.put('/:id', async (req, res) => {
   const { nombre, rtn, direccion, telefono, email, exento_impuestos } = req.body;
+  const fab = {};
+  for (const c of ['tipo_cliente', 'lista_precio_id', 'limite_credito', 'dias_credito']) if (req.body[c] !== undefined) fab[c] = req.body[c] === '' ? null : req.body[c];
   if (!rtnLuceValido(rtn)) {
     return res.status(400).json({ error: 'El RTN hondureño debe tener 13-14 dígitos — revísalo.' });
   }
   const { data, error } = await db
     .from('clientes')
-    .update({ nombre, rtn, direccion, telefono, email, exento_impuestos })
+    .update({ nombre, rtn, direccion, telefono, email, exento_impuestos, ...fab })
     .eq('id', req.params.id)
     .eq('es_consumidor_final', false)
     .select()

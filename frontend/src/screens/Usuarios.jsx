@@ -105,7 +105,10 @@ export default function Usuarios({ session, sucursales }) {
           />
           <select value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })}>
             <option value="cajero">Cajero</option>
-            <option value="gerente">Manager</option>
+            <option value="gerente">Gerente</option>
+            <option value="vendedor">Vendedor</option>
+            <option value="bodega">Bodega / despacho</option>
+            <option value="produccion">Producción</option>
             <option value="admin">Administrador</option>
           </select>
           <select value={form.sucursal_id} onChange={(e) => setForm({ ...form, sucursal_id: e.target.value })}>
@@ -159,7 +162,10 @@ export default function Usuarios({ session, sucursales }) {
           <select value={rolFiltro} onChange={(e) => setRolFiltro(e.target.value)}>
             <option value="">Todos los roles</option>
             <option value="cajero">Cajero</option>
-            <option value="gerente">Manager</option>
+            <option value="gerente">Gerente</option>
+            <option value="vendedor">Vendedor</option>
+            <option value="bodega">Bodega / despacho</option>
+            <option value="produccion">Producción</option>
             <option value="admin">Administrador</option>
           </select>
         </div>

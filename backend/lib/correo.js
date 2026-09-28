@@ -114,6 +114,35 @@ export async function enviarResumenCierre(cierre, sucursalNombre) {
   }
 }
 
+// Manda la cotización de proyecto en PDF al cliente (a pedido, botón "Enviar").
+export async function enviarCotizacionCliente(cotizacion, pdfBuffer, destinatario) {
+  if (!transportadorDisponible()) return { enviado: false, motivo: 'GMAIL_USER/GMAIL_APP_PASSWORD no configurados' };
+  if (!destinatario) return { enviado: false, motivo: 'El cliente no tiene correo registrado' };
+  const esc = (t) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const total = `L ${Number(cotizacion.total).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`;
+  const cuerpo = `
+  <div style="background:#f4f1ea;padding:24px 0;font-family:Arial,sans-serif">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden">
+      <tr><td style="background:#2b2d2f;padding:22px 28px;border-bottom:4px solid #5f7a4a">
+        <div style="color:#fff;font-size:26px;font-weight:800;letter-spacing:2px">ECOSTONE</div>
+        <div style="color:#e8e0d0;font-size:11px;letter-spacing:4px">PIEDRA DE ENCHAPE</div>
+      </td></tr>
+      <tr><td style="padding:26px 28px;color:#1c1d1f">
+        <p style="font-size:18px;font-weight:700;margin:0 0 8px">Hola, ${esc((cotizacion.nombre_cliente ?? '').split(' ')[0])}</p>
+        <p style="font-size:14px;color:#6b6a5e;line-height:1.5;margin:0 0 18px">Gracias por considerarnos para <strong style="color:#1c1d1f">${esc(cotizacion.proyecto)}</strong>. Te adjuntamos la cotización #${cotizacion.numero} en PDF.</p>
+        <div style="background:#2b2d2f;border-radius:10px;padding:14px 18px;color:#fff"><span style="color:#e8e0d0;font-size:11px;letter-spacing:2px">TOTAL</span><br><span style="font-size:24px;font-weight:700">${total}</span></div>
+        <p style="font-size:13px;color:#6b6a5e;margin:18px 0 0">Cualquier duda, respóndenos este correo. Quedamos atentos.</p>
+      </td></tr>
+    </table>
+  </div>`;
+  try {
+    await crearTransportador().sendMail({ from: process.env.GMAIL_USER, to: destinatario, subject: `Cotización #${cotizacion.numero} — ${cotizacion.proyecto} — EcoStone`, html: cuerpo, attachments: [{ filename: `cotizacion-${cotizacion.numero}.pdf`, content: pdfBuffer }] });
+    return { enviado: true };
+  } catch (e) {
+    return { enviado: false, motivo: e.message };
+  }
+}
+
 // Manda la factura en PDF al correo del cliente apenas se cobra (si el
 // cliente tiene correo registrado). Igual que el resumen de cierre: no-op
 // si no hay credenciales, nunca bloquea el cobro.

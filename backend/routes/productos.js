@@ -22,6 +22,18 @@ function errorDuplicado(error, { codigo, codigo_barras }) {
   return `Ya existe un producto con el código "${codigo}" — usa uno distinto.`;
 }
 
+
+const CAMPOS_FABRICA = ['tipo', 'modelo', 'color', 'unidad_venta', 'm2_por_caja', 'piezas_por_m2', 'peso_kg_m2', 'rendimiento_m2', 'stock_minimo_m2', 'descripcion'];
+function camposFabrica(body) {
+  const o = {};
+  for (const c of CAMPOS_FABRICA) {
+    if (body[c] === undefined) continue;
+    o[c] = body[c] === '' ? null : body[c];
+  }
+  if (o.tipo && !['piedra', 'accesorio', 'servicio', 'otro'].includes(o.tipo)) throw new Error('Tipo de producto inválido');
+  return o;
+}
+
 productos.get('/', async (req, res) => {
   let query = db.from('productos').select('*, categorias(id, nombre)').order('nombre');
   if (req.query.categoria_id) query = query.eq('categoria_id', req.query.categoria_id);
@@ -38,6 +50,12 @@ productos.post('/', requireRole('admin', 'gerente'), async (req, res) => {
   if (!nombre || precio === undefined) {
     return res.status(400).json({ error: 'nombre y precio son obligatorios' });
   }
+  let fabrica;
+  try {
+    fabrica = camposFabrica(req.body);
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
   const { data, error } = await db
     .from('productos')
     .insert({
@@ -49,6 +67,7 @@ productos.post('/', requireRole('admin', 'gerente'), async (req, res) => {
       impuesto1_tasa: impuesto1_tasa ?? 0.15,
       impuesto2_tasa: impuesto2_tasa ?? 0,
       impuesto3_tasa: impuesto3_tasa ?? 0,
+      ...fabrica,
     })
     .select()
     .single();
@@ -69,11 +88,17 @@ productos.put('/:id', requireRole('admin', 'gerente'), async (req, res) => {
   const { nombre, categoria_id, precio, impuesto1_tasa, activo } = req.body;
   const codigo = limpiarCodigo(req.body.codigo);
   const codigo_barras = limpiarCodigo(req.body.codigo_barras);
+  let fabrica;
+  try {
+    fabrica = camposFabrica(req.body);
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
   const { data: anterior } = await db.from('productos').select('*').eq('id', req.params.id).maybeSingle();
 
   const { data, error } = await db
     .from('productos')
-    .update({ codigo, codigo_barras, nombre, categoria_id, precio, impuesto1_tasa, activo })
+    .update({ codigo, codigo_barras, nombre, categoria_id, precio, impuesto1_tasa, activo, ...fabrica })
     .eq('id', req.params.id)
     .select()
     .single();
