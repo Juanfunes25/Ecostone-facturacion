@@ -29,7 +29,7 @@ const SELECT_CIERRE = '*, sucursales(nombre, alias), cajero:cajero_id(nombre), e
 // no ajuste el conteo al número del sistema. El servidor ni siquiera le
 // manda esas cifras (no basta con esconderlas en pantalla).
 function esCiego(perfil) {
-  return perfil.cierre_ciego && perfil.rol === 'cajero';
+  return perfil.cierre_ciego && ['cajero', 'ventas'].includes(perfil.rol);
 }
 
 function sinSistema(cierre) {
@@ -40,7 +40,7 @@ function sinSistema(cierre) {
 
 // Un cajero con sucursal fija sólo puede cerrar la suya.
 function sucursalPermitida(perfil, sucursalId) {
-  return !(perfil.rol === 'cajero' && perfil.sucursal_id && perfil.sucursal_id !== sucursalId);
+  return !(['cajero', 'ventas'].includes(perfil.rol) && perfil.sucursal_id && perfil.sucursal_id !== sucursalId);
 }
 
 function fechaLocal(iso) {
@@ -372,7 +372,7 @@ cierres.get('/', requireRole('admin', 'gerente'), async (req, res) => {
 async function cierrePermitido(req) {
   const { data } = await db.from('cierres_caja').select(SELECT_CIERRE).eq('id', req.params.id).maybeSingle();
   if (!data) return null;
-  if (req.perfil.rol === 'cajero' && data.cajero_id !== req.perfil.id) return null;
+  if (['cajero', 'ventas'].includes(req.perfil.rol) && data.cajero_id !== req.perfil.id) return null;
   return data;
 }
 

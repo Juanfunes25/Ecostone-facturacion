@@ -138,7 +138,7 @@ insumos.get('/materias-primas/:id/kardex', requireRole(...LEE), async (req, res)
 });
 
 // ── Parámetros de negocio ───────────────────────────────────────────────────
-insumos.get('/parametros', requireRole('admin', 'gerente', 'vendedor', 'produccion', 'bodega', 'cajero'), async (req, res) => {
+insumos.get('/parametros', requireRole('admin', 'gerente', 'vendedor', 'produccion', 'bodega', 'cajero', 'ventas'), async (req, res) => {
   const { data, error } = await db.from('parametros').select('*').order('clave');
   if (error) return fallo(res, error, 500);
   res.json(data);

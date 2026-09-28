@@ -9,7 +9,7 @@ import { traerTodo } from '../lib/consultas.js';
 import { liberarCuradosVencidos } from '../lib/colada.js';
 
 export const inventario = Router();
-const LEE = ['admin', 'gerente', 'bodega', 'produccion', 'vendedor', 'cajero'];
+const LEE = ['admin', 'gerente', 'bodega', 'produccion', 'vendedor', 'cajero', 'ventas'];
 const ESCRIBE = ['admin', 'gerente', 'bodega'];
 const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ error: e.message ?? String(e) });
 

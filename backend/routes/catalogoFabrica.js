@@ -7,7 +7,7 @@ import { numero } from '../lib/parametros.js';
 
 // Listas de precio y zonas de flete (auxiliares del catálogo de piedra).
 export const catalogoFabrica = Router();
-const LEE = ['admin', 'gerente', 'vendedor', 'cajero', 'bodega', 'produccion'];
+const LEE = ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega', 'produccion'];
 const GERENCIA = ['admin', 'gerente'];
 const fallo = (res, e, status = 400) => res.status(status).json({ error: e.message ?? String(e) });
 

@@ -93,26 +93,26 @@ function PantallaLogin({ onEntrar }) {
 }
 
 const PANTALLAS = [
-  { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero'], Componente: Cotizaciones },
-  { id: 'pos', etiqueta: 'Venta Directa', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Pos },
-  { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Facturas },
+  { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], Componente: Cotizaciones },
+  { id: 'pos', etiqueta: 'Venta Directa', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], Componente: Pos },
+  { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], Componente: Facturas },
   { id: 'cierres', etiqueta: 'Cierre de caja', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Cierres },
   { id: 'registrar-produccion', etiqueta: 'Registrar producción', grupo: 'Fabricación', roles: ['produccion', 'admin', 'gerente'], Componente: RegistrarProduccion },
   { id: 'reporte-produccion', etiqueta: 'Reporte de producción', grupo: 'Fabricación', roles: ['admin', 'gerente'], Componente: ReporteProduccion },
   { id: 'produccion', etiqueta: 'Órdenes y agenda', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], Componente: Fabricacion },
   { id: 'recetas', etiqueta: 'Recetas y costos', grupo: 'Fabricación', roles: ['admin', 'gerente'], Componente: Recetas },
   { id: 'insumos', etiqueta: 'Insumos', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], Componente: Insumos },
-  { id: 'inventario', etiqueta: 'Inventario de piedra', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega', 'vendedor'], Componente: Inventario },
+  { id: 'inventario', etiqueta: 'Inventario de piedra', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega', 'vendedor', 'ventas'], Componente: Inventario },
   { id: 'dashboard', etiqueta: 'Dashboard', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Dashboard },
   { id: 'reportes', etiqueta: 'Reportes', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Reportes },
   { id: 'catalogo', etiqueta: 'Catálogo de piedra', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor'], Componente: Piedra },
-  { id: 'clientes', etiqueta: 'Clientes', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor'], Componente: Clientes },
+  { id: 'clientes', etiqueta: 'Clientes', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'ventas'], Componente: Clientes },
   { id: 'antifraude', etiqueta: 'Antifraude', grupo: 'Control', roles: ['admin'], Componente: Antifraude },
   { id: 'bitacora', etiqueta: 'Bitácora', grupo: 'Control', roles: ['admin'], Componente: Bitacora },
   { id: 'puntos-emision', etiqueta: 'CAI / Emisión', grupo: 'Control', roles: ['admin', 'gerente'], Componente: PuntosEmision },
   { id: 'usuarios', etiqueta: 'Usuarios', grupo: 'Control', roles: ['admin'], Componente: Usuarios },
   { id: 'sucursales', etiqueta: 'Planta / sucursal', grupo: 'Control', roles: ['admin'], Componente: Sucursales },
-  { id: 'impresora', etiqueta: 'Impresora', grupo: 'Ajustes', roles: ['admin', 'gerente', 'cajero'], Componente: Impresora },
+  { id: 'impresora', etiqueta: 'Impresora', grupo: 'Ajustes', roles: ['admin', 'gerente', 'cajero', 'ventas'], Componente: Impresora },
 ];
 
 const GRUPOS = ['Operación', 'Fabricación', 'Negocio', 'Control', 'Ajustes'];
@@ -399,7 +399,7 @@ function PantallaApp({ session, onSalir }) {
             <span className="sidebar-avatar">{(perfil.nombre ?? '?').trim().slice(0, 1).toUpperCase()}</span>
             <span className="sidebar-usuario-texto">
               <strong>{perfil.nombre}</strong>
-              <small>{{ admin: 'Administrador', gerente: 'Gerente', vendedor: 'Vendedor', cajero: 'Cajero', bodega: 'Bodega / despacho', produccion: 'Producción' }[perfil.rol] ?? perfil.rol}</small>
+              <small>{{ admin: 'Administrador', gerente: 'Gerente', vendedor: 'Vendedor', ventas: 'Ventas', cajero: 'Cajero', bodega: 'Bodega / despacho', produccion: 'Producción' }[perfil.rol] ?? perfil.rol}</small>
             </span>
             <button className="boton-icono" onClick={salir} title="Cerrar sesión" aria-label="Cerrar sesión">
               <Icono nombre="salir" tam={18} />

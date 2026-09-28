@@ -17,7 +17,7 @@ export default function Cotizaciones({ session, perfil }) {
   const [vista, setVista] = useState({ tipo: 'lista' }); // lista | editor{inicial} | detalle{id}
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
-  const vende = ['admin', 'gerente', 'vendedor'].includes(perfil.rol);
+  const vende = ['admin', 'gerente', 'vendedor', 'ventas'].includes(perfil.rol);
 
   async function cargar() {
     const q = new URLSearchParams();
@@ -75,8 +75,8 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
   const [error, setError] = useState('');
   const [ocupado, setOcupado] = useState(false);
   const gerencia = ['admin', 'gerente'].includes(perfil.rol);
-  const vende = ['admin', 'gerente', 'vendedor'].includes(perfil.rol);
-  const cobra = ['admin', 'gerente', 'cajero'].includes(perfil.rol);
+  const vende = ['admin', 'gerente', 'vendedor', 'ventas'].includes(perfil.rol);
+  const cobra = ['admin', 'gerente', 'cajero', 'ventas'].includes(perfil.rol);
 
   async function cargar() {
     const [d, f] = await Promise.all([api.get(`/cotizaciones/${id}`, session), api.get('/formas-pago', session)]);

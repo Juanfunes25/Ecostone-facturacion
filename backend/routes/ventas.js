@@ -23,7 +23,7 @@ export const UMBRAL_RTN_OBLIGATORIO = 10000;
 
 // Sucursal fija de un cajero (null para admin/manager o cajero "flotante").
 export function sucursalDelCajero(perfil) {
-  return perfil?.rol === 'cajero' && perfil.sucursal_id ? perfil.sucursal_id : null;
+  return ['cajero', 'ventas'].includes(perfil?.rol) && perfil.sucursal_id ? perfil.sucursal_id : null;
 }
 
 function sucursalAjena(perfil, sucursalId) {
@@ -149,7 +149,7 @@ function datosTerceraEdad(body) {
 async function calcularOrden(req, { cliente_id, items, descuento_porcentaje }) {
   const porcentajeGeneral = validarPorcentaje(descuento_porcentaje);
   const cliente = await obtenerCliente(cliente_id);
-  const puedeEditarPrecio = req.perfil.rol !== 'cajero';
+  const puedeEditarPrecio = !['cajero', 'ventas'].includes(req.perfil.rol);
   const lineas = await construirItems(items, puedeEditarPrecio, porcentajeGeneral);
   // Resumen para la venta: el mayor porcentaje aplicado en alguna línea.
   const porcentaje = Math.max(0, ...lineas.map((l) => l.descuento_porcentaje));

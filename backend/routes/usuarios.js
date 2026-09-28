@@ -73,12 +73,12 @@ usuarios.post('/', requireRole('admin'), async (req, res) => {
   // todo el sistema. Siempre avisa a los administradores.
   await crearAlerta(req, {
     tipo: 'usuario.crear',
-    severidad: perfil.rol === 'cajero' ? 'media' : 'alta',
+    severidad: ['cajero', 'ventas'].includes(perfil.rol) ? 'media' : 'alta',
     titulo: `Nuevo usuario "${accesoMostrado}" (${perfil.rol}) creado por ${req.perfil.nombre}`,
     sucursalId: perfil.sucursal_id,
     entidad: 'usuario',
     entidadId: perfil.id,
-    correo: perfil.rol !== 'cajero',
+    correo: !['cajero', 'ventas'].includes(perfil.rol),
     detalle: { nombre, usuario: accesoMostrado, rol: perfil.rol },
   });
   res.status(201).json({ ...perfil, acceso: accesoMostrado });

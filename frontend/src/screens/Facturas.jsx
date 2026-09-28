@@ -138,7 +138,7 @@ export default function Facturas({ session, perfil, sucursales, filtroInicial, o
     registrarEvento('factura.ver', { factura: detalle.numero_factura, total: Number(detalle.total) }, detalle.sucursal_id);
     setMotivoAnulacion('');
     setMontoAnulacion(detalle.total);
-    setNotasCredito(perfil.rol === 'cajero' ? [] : await api.get(`/notas-credito?venta_id=${id}`, session));
+    setNotasCredito(['cajero', 'ventas'].includes(perfil.rol) ? [] : await api.get(`/notas-credito?venta_id=${id}`, session));
   }
 
   async function anular() {

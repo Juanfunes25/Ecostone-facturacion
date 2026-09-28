@@ -12,9 +12,9 @@ import { facturarVenta, guardarDetalle, obtenerPuntoEmisionActivo } from './vent
 import { textoSeguroFiltro } from '../lib/consultas.js';
 
 export const cotizaciones = Router();
-const VENDE = ['admin', 'gerente', 'vendedor'];
-const COBRA = ['admin', 'gerente', 'cajero'];
-const LEE = ['admin', 'gerente', 'vendedor', 'cajero'];
+const VENDE = ['admin', 'gerente', 'vendedor', 'ventas'];
+const COBRA = ['admin', 'gerente', 'cajero', 'ventas'];
+const LEE = ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'];
 const GERENCIA = ['admin', 'gerente'];
 const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ error: e.message ?? String(e) });
 const err = (msg, status = 400) => Object.assign(new Error(msg), { status });
@@ -87,7 +87,7 @@ async function armarLineas(lineasIn, { lista, cliente, perfil, params }) {
       const lista_p = precioLista.get(p.id) ?? (lista && !lista.isv_incluido ? round2(Number(p.precio) / (1 + tasa)) : Number(p.precio));
       let precio = l.precio_unitario === undefined || l.precio_unitario === '' || l.precio_unitario === null ? lista_p : numero(l.precio_unitario, lista_p);
       if (precio < lista_p * 0.995) {
-        if (perfil.rol === 'vendedor') throw err(`El precio de ${p.nombre} (L ${precio}) está por debajo de la lista (L ${lista_p}). Requiere autorización de gerente.`, 403);
+        if (['vendedor', 'ventas'].includes(perfil.rol)) throw err(`El precio de ${p.nombre} (L ${precio}) está por debajo de la lista (L ${lista_p}). Requiere autorización de gerente.`, 403);
         bajoLista.push({ producto: p.nombre, lista: lista_p, precio });
       }
       const costoBase = Number(p.costo_estandar || 0);
@@ -121,7 +121,7 @@ async function guardar(req, res, id = null) {
     const { lineas, bajoLista, tope } = await armarLineas(b.lineas, { lista, cliente, perfil: req.perfil, params });
     const descPct = Math.min(100, Math.max(0, numero(b.descuento_pct)));
     const calc = calcularCotizacion(lineas, { isv_incluido, descuento_pct: descPct, cliente_exento: !!cliente.exento_impuestos });
-    if (req.perfil.rol === 'vendedor' && calc.descuento_pct > tope) throw err(`El descuento total (${calc.descuento_pct}%) supera tu tope de ${tope}%. Pide autorización a un gerente.`, 403);
+    if (['vendedor', 'ventas'].includes(req.perfil.rol) && calc.descuento_pct > tope) throw err(`El descuento total (${calc.descuento_pct}%) supera tu tope de ${tope}%. Pide autorización a un gerente.`, 403);
 
     const vigencia = numero(b.vigencia_dias, numero(params.vigencia_cotizacion_dias, 15));
     const { data: planta } = await db.from('sucursales').select('id').eq('activo', true).order('created_at').limit(1).maybeSingle();
