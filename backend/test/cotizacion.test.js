@@ -5,22 +5,40 @@ import * as fe from '../../frontend/src/lib/cotizacion.js';
 
 const piedra = { tipo: 'piedra', unidad_venta: 'm2', m2_por_caja: 0.5 };
 
-test('m² se redondean a cajas completas y se cobra lo entregado', () => {
-  const r = be.dimensionarLinea(piedra, 10, 8); // 10.8 m² → 22 cajas de 0.5 = 11 m²
-  assert.equal(r.cajas, 22);
-  assert.equal(r.cantidad, 11);
-  assert.equal(r.m2_entregado, 11);
+test('con m² por caja se factura por cajas completas (nunca media caja)', () => {
+  const r = be.dimensionarLinea(piedra, 10, 0); // 10 m² / 0.5 = 20 cajas
+  assert.equal(r.cajas, 20);
+  assert.equal(r.cantidad, 20);
+  assert.equal(r.unidad_linea, 'caja');
+  assert.equal(r.factor_precio, 0.5); // el precio por m² se convierte a precio por caja
+  assert.equal(r.m2_entregado, 10);
+  const otra = be.dimensionarLinea({ ...piedra, m2_por_caja: 0.37 }, 10, 0); // 27.03 → 28 cajas
+  assert.equal(otra.cantidad, 28);
+  assert.equal(Number.isInteger(otra.cantidad), true);
 });
 
-test('exacto no sobra una caja', () => {
-  assert.equal(be.dimensionarLinea(piedra, 5, 0).cajas, 10);
+test('sin m² por caja los m² se redondean a enteros hacia arriba', () => {
+  const r = be.dimensionarLinea({ tipo: 'piedra', unidad_venta: 'm2' }, 25.4, 0);
+  assert.equal(r.cantidad, 26);
+  assert.equal(r.unidad_linea, 'm2');
+  assert.equal(r.factor_precio, 1);
 });
 
-test('venta por caja y accesorios por rendimiento', () => {
+test('venta por caja y accesorios por rendimiento siempre enteros', () => {
   const caja = { ...piedra, unidad_venta: 'caja' };
-  assert.deepEqual(be.dimensionarLinea(caja, 3, 0), { m2_total: 3, cajas: 6, cantidad: 6, m2_entregado: 3 });
+  const r = be.dimensionarLinea(caja, 3, 0);
+  assert.equal(r.cantidad, 6);
+  assert.equal(r.factor_precio, 1);
   const acc = be.sugerirAccesorios(11, [{ id: 'a', nombre: 'Pegamento', unidad_venta: 'saco', rendimiento_m2: 4 }]);
   assert.equal(acc[0].cantidad, 3);
+});
+
+test('la cantidad de una línea siempre es un entero (5 000 casos)', () => {
+  for (let i = 0; i < 5000; i++) {
+    const p = { unidad_venta: ['m2', 'caja', 'pieza', 'saco', 'galon'][i % 5], m2_por_caja: i % 3 ? Math.round(Math.random() * 100) / 100 + 0.05 : 0, piezas_por_m2: 22, rendimiento_m2: 3.5 };
+    const r = be.dimensionarLinea(p, Math.random() * 500, [0, 5, 8][i % 3]);
+    assert.equal(Number.isInteger(r.cantidad), true, JSON.stringify({ p, r }));
+  }
 });
 
 test('ISV separado suma 15% encima', () => {

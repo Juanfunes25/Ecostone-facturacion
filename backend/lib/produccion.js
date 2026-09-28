@@ -89,7 +89,7 @@ export function demandaPorProducto(lineas, productosPorId) {
     if (l.cajas && Number(p.m2_por_caja) > 0) m2 = Number(l.cajas) * Number(p.m2_por_caja);
     else if (Number(l.m2_neto) > 0) m2 = Number(l.m2_neto) * (1 + Number(l.desperdicio_pct || 0) / 100);
     else if (['m2', 'caja'].includes(p.unidad_venta)) m2 = Number(l.cantidad || 0);
-    if (m2 > 0) mapa.set(l.producto_id, round3((mapa.get(l.producto_id) ?? 0) + m2));
+    if (m2 > 0) mapa.set(l.producto_id, (mapa.get(l.producto_id) ?? 0) + Math.ceil(m2 - 1e-9));
   }
   return mapa;
 }
@@ -125,7 +125,7 @@ export async function reservarCotizacion(req, cotizacion, lineas) {
       // ¿Ya hay producción en camino para esta cotización?
       const { data: enCamino } = await db.from('ordenes_produccion').select('m2_planificado').eq('cotizacion_id', cotizacion.id).eq('producto_id', productoId).in('estado', ['planificada', 'curando']);
       const cubierto = round3((enCamino ?? []).reduce((s, o) => s + Number(o.m2_planificado), 0));
-      const porProducir = round3(falta - cubierto);
+      const porProducir = Math.ceil(falta - cubierto - 1e-9);
       if (porProducir > 0) {
         try {
           const receta = await recetaActiva(productoId);

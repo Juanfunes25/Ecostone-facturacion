@@ -130,6 +130,7 @@ fabricacion.post('/ordenes', requireRole(...PRODUCE), async (req, res) => {
   try {
     const { producto_id, m2_planificado, fecha_programada, molde_id, notas, responsable_id } = req.body;
     if (!producto_id) throw new Error('Elige el producto a fabricar');
+    if (!Number.isInteger(numero(m2_planificado))) throw new Error('La cantidad a producir debe ser un número entero');
     const orden = await crearOrdenProduccion(req, { producto_id, m2: numero(m2_planificado), fecha_programada, molde_id: molde_id || null, notas, responsable_id: responsable_id || req.perfil.id });
     await registrarAuditoria(req, { accion: 'produccion.crear_orden', entidad: 'orden_produccion', entidadId: orden.id, detalle: { lote: orden.lote, m2: orden.m2_planificado } });
     res.status(201).json(orden);
@@ -160,9 +161,10 @@ fabricacion.post('/ordenes/:id/terminar', requireRole('admin', 'gerente', 'bodeg
     const { data: orden } = await db.from('ordenes_produccion').select('*').eq('id', req.params.id).single();
     if (!orden) return res.status(404).json({ error: 'Orden no encontrada' });
     if (orden.estado !== 'curando') throw new Error('Solo pasa a "lista para vender" una producción que está en secado');
-    const bueno = req.body.m2_bueno === undefined || req.body.m2_bueno === '' ? Number(orden.m2_planificado) : round3(numero(req.body.m2_bueno));
-    const segunda = round3(numero(req.body.m2_segunda));
-    const merma = round3(numero(req.body.m2_merma));
+    const bueno = req.body.m2_bueno === undefined || req.body.m2_bueno === '' ? Number(orden.m2_planificado) : numero(req.body.m2_bueno);
+    const segunda = numero(req.body.m2_segunda);
+    const merma = numero(req.body.m2_merma);
+    if (![bueno, segunda, merma].every(Number.isInteger)) throw new Error('Las cantidades deben ser números enteros');
     if (bueno < 0 || segunda < 0 || merma < 0) throw new Error('Las cantidades no pueden ser negativas');
     if (bueno + segunda <= 0) throw new Error('Indica cuántos salieron buenos (o de segunda)');
     const { data: controles } = await db.from('controles_calidad').select('resultado').eq('orden_id', orden.id);
@@ -231,7 +233,7 @@ fabricacion.get('/mrp', requireRole(...LEE), async (req, res) => {
         const req_ = requerido.get(m.id) ?? 0;
         const minimo = Number(m.stock_minimo);
         const faltante = round3(Math.max(0, req_ - s));
-        const sugerido = round3(Math.max(0, req_ + minimo - s));
+        const sugerido = Math.ceil(Math.max(0, req_ + minimo - s) - 1e-9);
         return { ...m, stock: s, requerido: req_, minimo, faltante, sugerido_comprar: sugerido, costo_estimado: verCostos ? round2(sugerido * Number(m.costo_promedio)) : undefined };
       })
       .filter((f) => f.requerido > 0 || f.sugerido_comprar > 0)

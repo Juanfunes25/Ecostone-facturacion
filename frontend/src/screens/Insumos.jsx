@@ -160,7 +160,7 @@ export default function Insumos({ session, perfil }) {
         <Modal titulo={`${ETIQUETA_MOV[f.tipo]} — ${modal.mp.nombre}`} onCerrar={() => setModal(null)}
           pie={<button className="boton-sm" disabled={!f.cantidad} onClick={() => guardar(async () => { await api.post(`/insumos/materias-primas/${modal.mp.id}/movimiento`, session, f); setAviso(`${ETIQUETA_MOV[f.tipo]} registrada`); setTimeout(() => setAviso(''), 4000); })}>Registrar</button>}>
           <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <Campo etiqueta={`Cantidad (${modal.mp.unidad})`} ayuda={f.tipo === 'ajuste' ? 'Usa negativo para restar' : undefined} ancho={160}><input type="number" step="0.001" value={f.cantidad} onChange={(e) => set('cantidad', e.target.value)} /></Campo>
+            <Campo etiqueta={`Cantidad (${modal.mp.unidad})`} ayuda={f.tipo === 'ajuste' ? 'Usa negativo para restar' : undefined} ancho={160}><input type="number" inputMode="numeric" step="1" value={f.cantidad} onChange={(e) => set('cantidad', e.target.value)} /></Campo>
             {f.tipo === 'compra' && (
               <>
                 <Campo etiqueta={`Costo unitario (${f.moneda === 'USD' ? 'US$' : 'L'})`} ancho={170} ayuda={f.moneda === 'USD' && tc ? `Se convierte a L ${num(tc, 2)} por dólar` : undefined}><input type="number" step="0.0001" value={f.costo_unitario} onChange={(e) => set('costo_unitario', e.target.value)} /></Campo>

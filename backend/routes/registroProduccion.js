@@ -27,9 +27,10 @@ registroProduccion.get('/catalogo', requireRole(...ROLES), async (req, res) => {
 
 registroProduccion.post('/', requireRole(...ROLES), async (req, res) => {
   try {
-    const cantidad = round3(Number(req.body.cantidad));
+    const cantidad = Number(req.body.cantidad);
     if (!req.body.producto_id) throw new Error('Elige el modelo de piedra');
     if (!(cantidad > 0)) throw new Error('Escribe la cantidad producida');
+    if (!Number.isInteger(cantidad)) throw new Error('La cantidad debe ser un número entero');
     if (cantidad > 5000) throw new Error('Esa cantidad es demasiado grande; revísala');
     const { data: producto } = await db.from('productos').select('id, nombre, tipo, activo, unidad_venta').eq('id', req.body.producto_id).maybeSingle();
     if (!producto || producto.tipo !== 'piedra' || !producto.activo) throw new Error('Producto no válido');

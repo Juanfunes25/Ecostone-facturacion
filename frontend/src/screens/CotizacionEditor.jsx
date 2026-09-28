@@ -4,6 +4,9 @@ import { Campo } from '../components/Modal.jsx';
 import { calcularCotizacion, dimensionarLinea } from '../lib/cotizacion.js';
 import { L, num } from '../lib/fmt.js';
 
+// Toda cantidad se captura en números enteros (no se vende media caja).
+const entero = (v) => (v === '' ? '' : String(Math.max(0, Math.floor(Number(v) || 0))));
+const r2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const LINEA_VACIA = (tipo) => ({ tipo, producto_id: '', descripcion: '', unidad: 'viaje', m2_neto: '', cantidad: '', precio_unitario: '' });
 const TIPO_CLIENTE = [['final', 'Cliente final'], ['constructora', 'Constructora'], ['arquitecto', 'Arquitecto / diseñador'], ['instalador', 'Instalador'], ['ferreteria', 'Ferretería'], ['distribuidor', 'Distribuidor']];
 
@@ -38,7 +41,8 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
           const prod = productos.find((x) => x.id === l.producto_id);
           const listaIni = listas.find((x) => x.id === inicial.lista_precio_id);
           const deLista = prod ? preciosMap[`${prod.id}|${inicial.lista_precio_id}`] ?? (listaIni && !listaIni.isv_incluido ? Math.round((Number(prod.precio) / (1 + Number(prod.impuesto1_tasa ?? 0.15)) + Number.EPSILON) * 100) / 100 : Number(prod.precio)) : null;
-          const manual = l.producto_id ? Math.abs(Number(l.precio_unitario) - deLista) > 0.005 : true;
+          const factorIni = prod && l.m2_neto && Number(prod.m2_por_caja) > 0 && prod.unidad_venta === 'm2' ? Number(prod.m2_por_caja) : 1;
+          const manual = l.producto_id ? Math.abs(Number(l.precio_unitario) - r2(deLista * factorIni)) > 0.005 : true;
           return { tipo: l.tipo, producto_id: l.producto_id ?? '', descripcion: l.descripcion, unidad: l.unidad, m2_neto: l.m2_neto ?? '', cantidad: l.cantidad, precio_unitario: manual ? Number(l.precio_unitario) : '' };
         }));
       } else {
@@ -69,10 +73,11 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
       const p = l.producto_id ? porId.get(l.producto_id) : null;
       const dim = l.tipo === 'producto' && p && Number(l.m2_neto) > 0 ? dimensionarLinea(p, Number(l.m2_neto), 0) : null;
       const cantidad = dim ? dim.cantidad : Number(l.cantidad) || 0;
-      const lp = p ? precioLista(p) : 0;
+      const factor = dim?.factor_precio ?? 1; // con m² por caja se factura por caja: precio por m² × m² por caja
+      const lp = p ? r2(precioLista(p) * factor) : 0;
       const precio = l.precio_unitario !== '' && l.precio_unitario !== undefined ? Number(l.precio_unitario) : p ? lp : Number(l.precio_unitario) || 0;
       const costoBase = Number(p?.costo_estandar || 0);
-      return { ...l, descuento_pct: 0, p, dim, cantidad, precio_unitario: precio, precio_lista: lp, isv_tasa: p ? Number(p.impuesto1_tasa ?? 0.15) : 0.15, costo_unitario: p ? (p.unidad_venta === 'caja' ? costoBase * Number(p.m2_por_caja || 0) : costoBase) : 0 };
+      return { ...l, descuento_pct: 0, p, dim, cantidad, precio_unitario: precio, precio_lista: lp, isv_tasa: p ? Number(p.impuesto1_tasa ?? 0.15) : 0.15, costo_unitario: p ? (p.unidad_venta === 'caja' ? costoBase * Number(p.m2_por_caja || 0) : costoBase * factor) : 0 };
     });
   }, [lineas, cat, lista]);
   const calc = useMemo(() => calcularCotizacion(resueltas, { isv_incluido: lista?.isv_incluido ?? true, descuento_pct: verDescuento ? Number(enc.descuento_pct) || 0 : 0, cliente_exento: cli.exento }), [resueltas, lista, enc.descuento_pct, verDescuento, cli.exento]);
@@ -176,10 +181,14 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
                       })()}
                       {r?.p && r.precio_unitario < r.precio_lista * 0.995 && <small style={{ color: 'var(--peligro)' }}>Bajo lista ({L(r.precio_lista)})</small>}
                     </td>
-                    <td>{esProd && <input type="number" step="0.01" value={l.m2_neto} onChange={(e) => setL(i, { m2_neto: e.target.value })} />}</td>
+                    <td>{esProd && <input type="number" inputMode="numeric" step="1" min="1" value={l.m2_neto} onChange={(e) => setL(i, { m2_neto: entero(e.target.value) })} />}</td>
                     <td>
-                      {esProd && r?.dim ? <span><strong>{num(r.dim.cantidad, 2)} {r.p?.unidad_venta === 'caja' ? 'cajas' : 'm²'}</strong>{r.dim.cajas != null && r.p?.unidad_venta !== 'caja' && <small style={{ display: 'block', color: 'var(--text-dim)' }}>{num(r.dim.cajas, 0)} cajas completas</small>}{r.dim.cajas != null && r.p?.unidad_venta === 'caja' && <small style={{ display: 'block', color: 'var(--text-dim)' }}>{num(r.dim.m2_entregado, 2)} m² reales</small>}</span>
-                        : <span style={{ display: 'flex', gap: 4 }}><input type="number" step="0.01" value={l.cantidad} onChange={(e) => setL(i, { cantidad: e.target.value })} /><small>{l.unidad}</small></span>}
+                      {esProd && r?.dim ? (
+                        <span>
+                          <strong>{num(r.dim.cantidad, 0)} {r.dim.unidad_linea === 'caja' ? 'cajas' : r.p?.unidad_venta === 'm2' ? 'm²' : r.dim.unidad_linea}</strong>
+                          {r.dim.unidad_linea === 'caja' && r.dim.factor_precio !== 1 && <small style={{ display: 'block', color: 'var(--text-dim)' }}>= {num(r.dim.m2_entregado, 2)} m² · {L(r.precio_lista)} por caja</small>}
+                        </span>)
+                        : <span style={{ display: 'flex', gap: 4 }}><input type="number" inputMode="numeric" step="1" min="1" value={l.cantidad} onChange={(e) => setL(i, { cantidad: entero(e.target.value) })} /><small>{l.unidad}</small></span>}
                     </td>
                     <td><input type="number" step="0.01" value={l.precio_unitario} placeholder={r?.p ? String(r.precio_lista) : ''} onChange={(e) => setL(i, { precio_unitario: e.target.value })} /></td>
                     <td style={{ textAlign: 'right' }}>{L(c?.monto ?? 0)}</td>

@@ -111,7 +111,7 @@ export default function RegistrarProduccion({ session, perfil }) {
           {producto && (
             <>
               <h3 style={{ margin: '18px 0 8px' }}>3. Cantidad producida ({producto.unidad})</h3>
-              <input type="number" inputMode="decimal" min="0" step="any" placeholder={`0 ${producto.unidad}`} value={cantidad} onChange={(e) => setCantidad(e.target.value)}
+              <input type="number" inputMode="numeric" min="0" step="1" placeholder={`0 ${producto.unidad}`} value={cantidad} onChange={(e) => setCantidad(e.target.value === '' ? '' : String(Math.max(0, Math.floor(Number(e.target.value) || 0))))}
                 style={{ width: '100%', minHeight: 72, fontSize: '2rem', textAlign: 'center', fontWeight: 700, borderRadius: 14 }} />
               {!verNota
                 ? <button className="boton-sm boton-secundario" style={{ marginTop: 10 }} onClick={() => setVerNota(true)}>+ Agregar nota</button>

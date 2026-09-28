@@ -176,8 +176,8 @@ export default function Inventario({ session, perfil }) {
           <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <Campo etiqueta="Lote" ancho={170}><input value={d.lote} onChange={(e) => set('lote', e.target.value)} placeholder={modal.tipo === 'inicial' ? 'Ej.: INICIAL-01' : 'Lote'} list="lotes" /><datalist id="lotes">{modal.producto.lotes.map((l) => <option key={l.lote + l.calidad} value={l.lote} />)}</datalist></Campo>
             {modal.tipo === 'conteo'
-              ? <Campo etiqueta={`Contado (${modal.producto.unidad})`} ancho={150} ayuda="Cuenta lo que hay físicamente; el sistema calcula la diferencia"><input type="number" step="0.001" value={d.contado} onChange={(e) => set('contado', e.target.value)} /></Campo>
-              : <Campo etiqueta={modal.producto.unidad} ancho={130} ayuda={modal.tipo === 'ajuste' ? 'Negativo para restar' : undefined}><input type="number" step="0.001" value={d.m2} onChange={(e) => set('m2', e.target.value)} /></Campo>}
+              ? <Campo etiqueta={`Contado (${modal.producto.unidad})`} ancho={150} ayuda="Cuenta lo que hay físicamente; el sistema calcula la diferencia"><input type="number" inputMode="numeric" step="1" min="0" value={d.contado} onChange={(e) => set('contado', e.target.value)} /></Campo>
+              : <Campo etiqueta={modal.producto.unidad} ancho={130} ayuda={modal.tipo === 'ajuste' ? 'Negativo para restar' : undefined}><input type="number" inputMode="numeric" step="1" value={d.m2} onChange={(e) => set('m2', e.target.value)} /></Campo>}
             {modal.tipo === 'inicial' && gerencia && <Campo etiqueta="Costo L/m²" ancho={120}><input type="number" step="0.01" value={d.costo_m2} onChange={(e) => set('costo_m2', e.target.value)} /></Campo>}
             {modal.tipo !== 'conteo' && <Campo etiqueta="Motivo (obligatorio)"><input value={d.motivo} onChange={(e) => set('motivo', e.target.value)} placeholder={modal.tipo === 'inicial' ? 'Ej.: existencia al arrancar el sistema' : 'Ej.: piezas rotas al manipular'} /></Campo>}
           </div>

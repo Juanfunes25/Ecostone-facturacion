@@ -93,6 +93,7 @@ async function construirItems(itemsSolicitados, puedeEditarPrecio, porcentajeGen
     if (!Number.isFinite(cantidad) || cantidad <= 0 || cantidad > 9999) {
       throw new Error(`Cantidad inválida para ${producto.nombre}`);
     }
+    if (!Number.isInteger(cantidad)) throw new Error(`La cantidad de ${producto.nombre} debe ser un número entero (no se vende media unidad)`);
     const precio_unitario =
       puedeEditarPrecio && item.precio_unitario !== undefined ? Number(item.precio_unitario) : producto.precio;
     if (!Number.isFinite(Number(precio_unitario)) || Number(precio_unitario) < 0) {

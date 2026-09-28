@@ -78,23 +78,29 @@ async function armarLineas(lineasIn, { lista, cliente, perfil, params }) {
     if (tipo === 'producto' || tipo === 'accesorio') {
       const p = prodPorId.get(l.producto_id);
       if (!p) throw err(`Producto no encontrado en la línea ${i + 1}`);
+      if (numero(l.m2_neto) > 0 && !Number.isInteger(numero(l.m2_neto))) throw err(`Los m² de la línea ${i + 1} deben ser un número entero`);
       const dim = tipo === 'producto' && numero(l.m2_neto) > 0 ? dimensionarLinea(p, numero(l.m2_neto), numero(l.desperdicio_pct)) : null;
       const cantidad = dim ? dim.cantidad : numero(l.cantidad);
       if (!(cantidad > 0)) throw err(`Indica la cantidad en la línea ${i + 1}`);
+      if (!Number.isInteger(cantidad)) throw err(`La cantidad de la línea ${i + 1} debe ser un número entero (no se vende media caja)`);
+      // Con m² por caja la línea se factura por cajas completas: el precio por m² pasa a ser precio por caja.
+      const factor = dim?.factor_precio ?? 1;
       // El precio del catálogo es el de la lista Público (con ISV). Si la lista es sin ISV y
       // el producto no tiene precio propio en ella, se deriva quitando el ISV (no se cobra doble).
       const tasa = Number(p.impuesto1_tasa ?? 0.15);
-      const lista_p = precioLista.get(p.id) ?? (lista && !lista.isv_incluido ? round2(Number(p.precio) / (1 + tasa)) : Number(p.precio));
+      const lista_m2 = precioLista.get(p.id) ?? (lista && !lista.isv_incluido ? round2(Number(p.precio) / (1 + tasa)) : Number(p.precio));
+      const lista_p = round2(lista_m2 * factor);
       let precio = l.precio_unitario === undefined || l.precio_unitario === '' || l.precio_unitario === null ? lista_p : numero(l.precio_unitario, lista_p);
       if (precio < lista_p * 0.995) {
         if (['vendedor', 'ventas'].includes(perfil.rol)) throw err(`El precio de ${p.nombre} (L ${precio}) está por debajo de la lista (L ${lista_p}). Requiere autorización de gerente.`, 403);
         bajoLista.push({ producto: p.nombre, lista: lista_p, precio });
       }
       const costoBase = Number(p.costo_estandar || 0);
-      return { ...base, producto_id: p.id, descripcion: p.nombre, unidad: p.unidad_venta, m2_neto: dim ? numero(l.m2_neto) : null, desperdicio_pct: dim ? numero(l.desperdicio_pct) : 0, cajas: dim?.cajas ?? null, cantidad, precio_unitario: precio, isv_tasa: Number(p.impuesto1_tasa ?? 0.15), costo_unitario: p.unidad_venta === 'caja' ? costoBase * Number(p.m2_por_caja || 0) : costoBase };
+      return { ...base, producto_id: p.id, descripcion: p.nombre, unidad: dim?.unidad_linea ?? p.unidad_venta, m2_neto: dim ? numero(l.m2_neto) : null, desperdicio_pct: dim ? numero(l.desperdicio_pct) : 0, cajas: dim?.cajas ?? null, cantidad, precio_unitario: precio, isv_tasa: Number(p.impuesto1_tasa ?? 0.15), costo_unitario: p.unidad_venta === 'caja' ? costoBase * Number(p.m2_por_caja || 0) : costoBase * factor };
     }
     const cantidad = numero(l.cantidad);
     if (!String(l.descripcion ?? '').trim() || !(cantidad > 0) || numero(l.precio_unitario, -1) < 0) throw err(`Completa descripción, cantidad y precio de la línea ${i + 1}`);
+    if (!Number.isInteger(cantidad)) throw err(`La cantidad de la línea ${i + 1} debe ser un número entero`);
     return { ...base, producto_id: null, descripcion: String(l.descripcion).trim(), unidad: l.unidad || (tipo === 'instalacion' ? 'm2' : 'viaje'), m2_neto: null, desperdicio_pct: 0, cajas: null, cantidad, precio_unitario: numero(l.precio_unitario), isv_tasa: 0.15, costo_unitario: numero(l.costo_unitario) };
   });
   return { lineas, bajoLista, tope };

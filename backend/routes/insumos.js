@@ -96,6 +96,7 @@ insumos.post('/materias-primas/:id/movimiento', requireRole(...LEE), async (req,
     }
     let cant = numero(cantidad);
     if (!(cant !== 0)) throw new Error('Indica la cantidad');
+    if (!Number.isInteger(cant)) throw new Error('La cantidad debe ser un número entero');
     if (['compra', 'inicial'].includes(tipo)) {
       cant = Math.abs(cant);
       if (!(numero(costo_unitario, -1) >= 0)) throw new Error('Indica el costo unitario de la compra');

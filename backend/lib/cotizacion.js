@@ -16,30 +16,23 @@ export const round3 = (n) => Math.round((Number(n) + Number.EPSILON) * 1000) / 1
 export const round4 = (n) => Math.round((Number(n) + Number.EPSILON) * 10000) / 10000;
 const techo = (x) => Math.ceil(Number(x) - 1e-9);
 
-// m² netos + desperdicio → lo que se debe vender/entregar.
+// m² pedidos → lo que se vende/entrega. REGLA: las cantidades vendidas son SIEMPRE enteras
+// (no se vende media caja). Si el producto tiene m² por caja, la línea se factura por
+// cajas completas y el precio unitario pasa a ser el de la caja (precio por m² × m² por caja).
 export function dimensionarLinea(producto, m2_neto, desperdicio_pct = 0) {
   const neto = Number(m2_neto) || 0;
   const m2_total = round3(neto * (1 + (Number(desperdicio_pct) || 0) / 100));
   const porCaja = Number(producto?.m2_por_caja) || 0;
   const unidad = producto?.unidad_venta ?? 'm2';
-  let cajas = null;
-  let cantidad = m2_total;
-  let m2_entregado = m2_total;
 
-  if (unidad === 'caja' && porCaja > 0) {
-    cajas = techo(m2_total / porCaja);
-    cantidad = cajas;
-    m2_entregado = round3(cajas * porCaja);
-  } else if (unidad === 'm2' && porCaja > 0) {
-    cajas = techo(m2_total / porCaja);
-    cantidad = round3(cajas * porCaja);
-    m2_entregado = cantidad;
-  } else if (unidad === 'pieza' && Number(producto?.piezas_por_m2) > 0) {
-    cantidad = techo(m2_total * Number(producto.piezas_por_m2));
-  } else if (['saco', 'galon', 'unidad'].includes(unidad) && Number(producto?.rendimiento_m2) > 0) {
-    cantidad = techo(m2_total / Number(producto.rendimiento_m2));
+  if (porCaja > 0 && (unidad === 'm2' || unidad === 'caja')) {
+    const cajas = techo(m2_total / porCaja);
+    return { m2_total, cajas, cantidad: cajas, unidad_linea: 'caja', factor_precio: unidad === 'm2' ? porCaja : 1, m2_entregado: round3(cajas * porCaja) };
   }
-  return { m2_total, cajas, cantidad, m2_entregado };
+  let cantidad = techo(m2_total);
+  if (unidad === 'pieza' && Number(producto?.piezas_por_m2) > 0) cantidad = techo(m2_total * Number(producto.piezas_por_m2));
+  else if (['saco', 'galon', 'unidad'].includes(unidad) && Number(producto?.rendimiento_m2) > 0) cantidad = techo(m2_total / Number(producto.rendimiento_m2));
+  return { m2_total, cajas: null, cantidad, unidad_linea: unidad, factor_precio: 1, m2_entregado: unidad === 'm2' ? cantidad : m2_total };
 }
 
 // Accesorios sugeridos según el rendimiento (m² que cubre cada unidad).
