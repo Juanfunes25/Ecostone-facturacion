@@ -115,7 +115,7 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
           <button className="boton-sm boton-secundario" onClick={onVolver}>← Volver</button>
         </div>
         <p style={{ margin: '6px 0' }}><strong>{c.nombre_cliente}</strong>{c.rtn_cliente && ` · RTN ${c.rtn_cliente}`}{c.telefono && ` · ${c.telefono}`}{c.email && ` · ${c.email}`}</p>
-        <p style={{ margin: '0 0 6px' }}>{c.proyecto && <><strong>{c.proyecto}</strong>{c.direccion_obra && ` — ${c.direccion_obra}`} · </>}Lista {c.listas_precio?.nombre} ({c.isv_incluido ? 'ISV incluido' : '+ ISV'}){c.fecha_entrega && ` · entrega ${fechaCorta(c.fecha_entrega)}`} · vigencia {fechaCorta(c.fecha_vigencia)}</p>
+        <p style={{ margin: '0 0 6px' }}>{c.proyecto && <><strong>{c.proyecto}</strong>{c.direccion_obra && ` — ${c.direccion_obra}`} · </>}{c.isv_incluido ? 'Precios con ISV incluido' : 'Precios + ISV'}{c.fecha_entrega && ` · entrega ${fechaCorta(c.fecha_entrega)}`} · vigencia {fechaCorta(c.fecha_vigencia)}</p>
         <div className="toolbar" style={{ flexWrap: 'wrap' }}>
           <button className="boton-md boton-secundario" onClick={() => verPdf(`/cotizaciones/${c.id}/pdf`, session).catch((e) => setError(e.message))}>Ver PDF</button>
           {abierta && vende && <button className="boton-md boton-secundario" onClick={() => onEditar(c)}>Editar</button>}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { Campo } from '../components/Modal.jsx';
-import { calcularCotizacion, dimensionarLinea, pesoEstimadoKg } from '../lib/cotizacion.js';
+import { calcularCotizacion, dimensionarLinea } from '../lib/cotizacion.js';
 import { L, num } from '../lib/fmt.js';
 
 const LINEA_VACIA = (tipo) => ({ tipo, producto_id: '', descripcion: '', unidad: 'viaje', m2_neto: '', cantidad: '', precio_unitario: '' });
@@ -76,8 +76,6 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
     });
   }, [lineas, cat, lista]);
   const calc = useMemo(() => calcularCotizacion(resueltas, { isv_incluido: lista?.isv_incluido ?? true, descuento_pct: verDescuento ? Number(enc.descuento_pct) || 0 : 0, cliente_exento: cli.exento }), [resueltas, lista, enc.descuento_pct, verDescuento, cli.exento]);
-  const m2Piedra = resueltas.filter((l) => l.tipo === 'producto' && l.dim).reduce((s, l) => s + l.dim.m2_total, 0);
-  const peso = cat ? pesoEstimadoKg(resueltas.map((l) => ({ producto_id: l.producto_id, m2_entregado: l.dim?.m2_entregado })), porId) : 0;
 
   const setL = (i, patch) => setLineas((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   const setPiedra = (i, id) => { const p = porId.get(id); setL(i, { producto_id: id, unidad: p?.unidad_venta ?? 'm2', precio_unitario: '' }); };
@@ -93,7 +91,7 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
     setGuardando(true);
     try {
       const cuerpo = {
-        ...cli, ...enc, lista_precio_id: lista?.id ?? null, entrega: 'retira', descuento_pct: verDescuento ? Number(enc.descuento_pct) || 0 : 0,
+        ...cli, ...enc, lista_precio_id: lista?.id ?? null, anticipo_pct: 0, entrega: 'retira', descuento_pct: verDescuento ? Number(enc.descuento_pct) || 0 : 0,
         lineas: lineas.filter((l) => l.producto_id || l.descripcion).map((l, i) => ({
           tipo: l.tipo, producto_id: l.producto_id || null, descripcion: l.descripcion, unidad: l.unidad,
           m2_neto: l.m2_neto === '' ? null : Number(l.m2_neto), desperdicio_pct: 0,
@@ -133,11 +131,9 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
           <Campo etiqueta="Teléfono" ancho={130}><input value={cli.telefono} onChange={(e) => setCli({ ...cli, telefono: e.target.value })} /></Campo>
           <Campo etiqueta="Correo"><input value={cli.email} onChange={(e) => setCli({ ...cli, email: e.target.value })} /></Campo>
           <Campo etiqueta="Tipo de cliente" ancho={170}><select value={cli.tipo_cliente} onChange={(e) => setCli({ ...cli, tipo_cliente: e.target.value })}>{TIPO_CLIENTE.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></Campo>
-          <Campo etiqueta="Lista de precios" ancho={210} ayuda={lista?.isv_incluido ? 'Precios con ISV incluido' : 'Precios + ISV aparte'}><select value={lista?.id ?? ''} onChange={(e) => setCli({ ...cli, lista_precio_id: e.target.value })}>{cat.listas.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}</select></Campo>
         </div>
         <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <Campo etiqueta="Vigencia (días)" ancho={120}><input type="number" value={enc.vigencia_dias} onChange={(e) => setEnc({ ...enc, vigencia_dias: e.target.value })} /></Campo>
-          <Campo etiqueta="Anticipo %" ancho={110}><input type="number" min="0" max="100" value={enc.anticipo_pct} onChange={(e) => setEnc({ ...enc, anticipo_pct: e.target.value })} /></Campo>
         </div>
       </div>
 
@@ -197,11 +193,6 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
         <div className="dos-columnas" style={{ marginTop: 12 }}>
           <div>
             <Campo etiqueta="Notas para el cliente"><input value={enc.notas} onChange={(e) => setEnc({ ...enc, notas: e.target.value })} /></Campo>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.85em' }}>
-              {num(m2Piedra, 2)} m² de piedra{peso > 0 && <> · peso aprox. {num(peso, 0)} kg (para el flete)</>}.
-              La piedra se cobra por caja completa entregada.
-            </p>
-            {gerencia && <p style={{ fontSize: '0.85em' }}>Costo estimado {L(calc.costo)} · margen <strong>{num(calc.margen_pct, 1)}%</strong></p>}
           </div>
           <div style={{ textAlign: 'right' }}>
             {!verDescuento && <button className="boton-sm boton-secundario" onClick={() => setVerDescuento(true)}>+ Aplicar descuento negociado</button>}
@@ -215,7 +206,6 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
             <div>Subtotal {L(calc.subtotal)}</div>
             <div>ISV 15% {L(calc.isv)}</div>
             <div style={{ fontSize: '1.4em' }}><strong>Total {L(calc.total)}</strong></div>
-            {Number(enc.anticipo_pct) > 0 && <div style={{ color: 'var(--text-dim)' }}>Anticipo {num(enc.anticipo_pct, 0)}%: {L((calc.total * Number(enc.anticipo_pct)) / 100)}</div>}
           </div>
         </div>
         <div className="toolbar" style={{ marginTop: 12 }}>

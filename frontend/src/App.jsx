@@ -17,7 +17,6 @@ import Usuarios from './screens/Usuarios.jsx';
 import Cierres from './screens/Cierres.jsx';
 import Reportes from './screens/Reportes.jsx';
 import PuntosEmision from './screens/PuntosEmision.jsx';
-import CajaChica from './screens/CajaChica.jsx';
 import Sucursales from './screens/Sucursales.jsx';
 import Dashboard from './screens/Dashboard.jsx';
 import Impresora from './screens/Impresora.jsx';
@@ -95,7 +94,7 @@ function PantallaLogin({ onEntrar }) {
 
 const PANTALLAS = [
   { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero'], Componente: Cotizaciones },
-  { id: 'pos', etiqueta: 'Venta de mostrador', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Pos },
+  { id: 'pos', etiqueta: 'Venta Directa', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Pos },
   { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Facturas },
   { id: 'cierres', etiqueta: 'Cierre de caja', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Cierres },
   { id: 'registrar-produccion', etiqueta: 'Registrar producción', grupo: 'Fabricación', roles: ['produccion', 'admin', 'gerente'], Componente: RegistrarProduccion },
@@ -108,7 +107,6 @@ const PANTALLAS = [
   { id: 'reportes', etiqueta: 'Reportes', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Reportes },
   { id: 'catalogo', etiqueta: 'Catálogo de piedra', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor'], Componente: Piedra },
   { id: 'clientes', etiqueta: 'Clientes', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor'], Componente: Clientes },
-  { id: 'caja-chica', etiqueta: 'Caja chica', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: CajaChica },
   { id: 'antifraude', etiqueta: 'Antifraude', grupo: 'Control', roles: ['admin'], Componente: Antifraude },
   { id: 'bitacora', etiqueta: 'Bitácora', grupo: 'Control', roles: ['admin'], Componente: Bitacora },
   { id: 'puntos-emision', etiqueta: 'CAI / Emisión', grupo: 'Control', roles: ['admin', 'gerente'], Componente: PuntosEmision },

@@ -13,7 +13,6 @@ import { ventas } from './routes/ventas.js';
 import { notasCredito } from './routes/notasCredito.js';
 import { cierres } from './routes/cierres.js';
 import { reportes } from './routes/reportes.js';
-import { cajaChica } from './routes/cajaChica.js';
 import { usuarios } from './routes/usuarios.js';
 import { facturaImpresion } from './routes/facturaImpresion.js';
 import { sucursales } from './routes/sucursales.js';
@@ -95,10 +94,9 @@ app.use('/api/ventas', ventas);
 app.use('/api/ventas', facturaImpresion); // /api/ventas/:id/ticket, /api/ventas/:id/pdf
 app.use('/api/notas-credito', notasCredito);
 app.use('/api/cierres', cierres);
-// Reportes, dashboard y caja chica son de gerencia: antes cualquier cajero
+// Reportes y dashboard son de gerencia: antes cualquier cajero
 // logueado podía pedir las ventas de todas las sucursales por la API.
 app.use('/api/reportes', requireRole('admin', 'gerente'), reportes);
-app.use('/api/caja-chica', requireRole('admin', 'gerente'), cajaChica);
 app.use('/api/usuarios', usuarios);
 app.use('/api/dashboard', requireRole('admin', 'gerente'), dashboard);
 app.use('/api/auditoria', auditoria);

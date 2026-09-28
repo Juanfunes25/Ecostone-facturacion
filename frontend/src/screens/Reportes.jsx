@@ -472,8 +472,6 @@ export default function Reportes({ session, sucursales }) {
                 <Kpi titulo="Descuentos" valor={k.descuentos} anterior={ka.descuentos} invertir />
                 <Kpi titulo="Notas de crédito" valor={k.notas_credito} anterior={ka.notas_credito} invertir detalle="parciales" />
                 <Kpi titulo="ISV facturado" valor={k.isv} anterior={ka.isv} />
-                <Kpi titulo="Gastos caja chica" valor={datos.gastos.total} detalle={`${datos.gastos.movimientos} movimientos`} />
-                <Kpi titulo="Ventas netas − gastos" valor={k.ventas_netas - datos.gastos.total} />
               </div>
               <Seccion titulo="Hallazgos del período">
                 <Hallazgos d={datos} />
@@ -802,26 +800,6 @@ export default function Reportes({ session, sucursales }) {
                   Los descuentos equivalen al {k.ventas_brutas > 0 ? Math.round((k.descuentos / k.ventas_brutas) * 1000) / 10 : 0}% de la venta bruta.
                 </p>
               </Seccion>
-              {datos.gastos_por_tipo.length > 0 && (
-                <Seccion titulo="Gastos de caja chica">
-                  <table className="tabla rep-tabla">
-                    <tbody>
-                      {datos.gastos_por_tipo.map((g) => (
-                        <tr key={g.tipo}>
-                          <td>{g.tipo}</td>
-                          <td className="rep-num rep-tenue">{g.movimientos}</td>
-                          <td className="rep-num">{L(g.monto)}</td>
-                        </tr>
-                      ))}
-                      <tr className="rep-fila-total">
-                        <td>Total</td>
-                        <td></td>
-                        <td className="rep-num">{L(datos.gastos.total)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </Seccion>
-              )}
             </div>
           )}
 
