@@ -33,7 +33,8 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
         const preciosMap = Object.fromEntries(pr.map((x) => [`${x.producto_id}|${x.lista_id}`, Number(x.precio)]));
         setLineas(inicial.lineas.map((l) => {
           const prod = productos.find((x) => x.id === l.producto_id);
-          const deLista = prod ? preciosMap[`${prod.id}|${inicial.lista_precio_id}`] ?? Number(prod.precio) : null;
+          const listaIni = listas.find((x) => x.id === inicial.lista_precio_id);
+          const deLista = prod ? preciosMap[`${prod.id}|${inicial.lista_precio_id}`] ?? (listaIni && !listaIni.isv_incluido ? Math.round((Number(prod.precio) / (1 + Number(prod.impuesto1_tasa ?? 0.15)) + Number.EPSILON) * 100) / 100 : Number(prod.precio)) : null;
           const manual = l.producto_id ? Math.abs(Number(l.precio_unitario) - deLista) > 0.005 : true;
           return { tipo: l.tipo, producto_id: l.producto_id ?? '', descripcion: l.descripcion, unidad: l.unidad, m2_neto: l.m2_neto ?? '', desperdicio_pct: l.desperdicio_pct ?? '', cantidad: l.cantidad, precio_unitario: manual ? Number(l.precio_unitario) : '', descuento_pct: Number(l.descuento_pct) };
         }));
@@ -55,7 +56,8 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
     return cat.listas.find((l) => l.id === (cli.lista_precio_id || '')) ?? cat.listas.find((l) => l.orden === 1) ?? cat.listas[0];
   }, [cat, cli.lista_precio_id]);
   const porId = useMemo(() => new Map((cat?.productos ?? []).map((p) => [p.id, p])), [cat]);
-  const precioLista = (p) => cat.precios[`${p.id}|${lista?.id}`] ?? Number(p.precio);
+  // Precio del catálogo = lista Público (con ISV). En una lista sin ISV sin precio propio, se quita el ISV.
+  const precioLista = (p) => cat.precios[`${p.id}|${lista?.id}`] ?? (lista && !lista.isv_incluido ? Math.round((Number(p.precio) / (1 + Number(p.impuesto1_tasa ?? 0.15)) + Number.EPSILON) * 100) / 100 : Number(p.precio));
 
   // Líneas con todo resuelto (mismo cálculo que hace el servidor).
   const resueltas = useMemo(() => {

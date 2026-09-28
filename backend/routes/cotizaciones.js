@@ -81,7 +81,10 @@ async function armarLineas(lineasIn, { lista, cliente, perfil, params }) {
       const dim = tipo === 'producto' && numero(l.m2_neto) > 0 ? dimensionarLinea(p, numero(l.m2_neto), numero(l.desperdicio_pct)) : null;
       const cantidad = dim ? dim.cantidad : numero(l.cantidad);
       if (!(cantidad > 0)) throw err(`Indica la cantidad en la línea ${i + 1}`);
-      const lista_p = precioLista.get(p.id) ?? Number(p.precio);
+      // El precio del catálogo es el de la lista Público (con ISV). Si la lista es sin ISV y
+      // el producto no tiene precio propio en ella, se deriva quitando el ISV (no se cobra doble).
+      const tasa = Number(p.impuesto1_tasa ?? 0.15);
+      const lista_p = precioLista.get(p.id) ?? (lista && !lista.isv_incluido ? round2(Number(p.precio) / (1 + tasa)) : Number(p.precio));
       let precio = l.precio_unitario === undefined || l.precio_unitario === '' || l.precio_unitario === null ? lista_p : numero(l.precio_unitario, lista_p);
       if (precio < lista_p * 0.995) {
         if (perfil.rol === 'vendedor') throw err(`El precio de ${p.nombre} (L ${precio}) está por debajo de la lista (L ${lista_p}). Requiere autorización de gerente.`, 403);
