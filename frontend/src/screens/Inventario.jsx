@@ -83,7 +83,7 @@ export default function Inventario({ session, perfil }) {
       {error && <div className="error" onClick={() => setError('')}>{error}</div>}
       {aviso && <div className="aviso-ok" onClick={() => setAviso('')}>{aviso}</div>}
       <Kpis items={[
-        { titulo: 'Disponible para vender', valor: `${num(totalDisp, 1)} m²`, pie: cajasEsq ? `+ ${num(cajasEsq, 0)} cajas de esquina` : 'primera calidad' },
+        { titulo: 'DISPONIBLE PARA VENDER', valor: `${num(totalDisp, 1)} m²`, pie: cajasEsq ? `+ ${num(cajasEsq, 0)} cajas de esquina` : undefined },
         { titulo: 'Reservado', valor: `${num(totalRes, 1)} m²`, pie: 'Apartado para cotizaciones aprobadas' },
         { titulo: 'En secado', valor: `${num(totalSecado, 1)} m²`, pie: 'Aún no entra al inventario' },
         { titulo: 'Valor a costo', valor: gerencia ? L(valor) : '—' },
@@ -107,12 +107,12 @@ export default function Inventario({ session, perfil }) {
             <span style={{ color: 'var(--text-dim)', marginLeft: 'auto' }}>Mostrando {visibles.length} de {filas.length}</span>
             <button className="boton-sm boton-secundario" onClick={() => descargarCsv(`inventario-piedra-${new Date().toISOString().slice(0, 10)}.csv`, visibles, [
               { titulo: 'Producto', valor: (p) => p.nombre }, { titulo: 'Unidad', valor: (p) => p.unidad }, { titulo: 'En secado', valor: (p) => p.en_secado }, { titulo: 'Físico 1ª', valor: (p) => p.fisico_primera },
-              { titulo: 'Reservado', valor: (p) => p.reservado }, { titulo: 'Disponible', valor: (p) => p.disponible_primera }, { titulo: 'Segunda', valor: (p) => p.fisico_segunda }, { titulo: 'Cajas disponibles', valor: (p) => p.cajas_disponibles ?? '' },
+              { titulo: 'Reservado', valor: (p) => p.reservado }, { titulo: 'Disponible', valor: (p) => p.disponible_primera },
             ])}>Exportar CSV</button>
           </div>
           <div style={{ overflowX: 'auto' }}>
-            <table className="tabla" style={{ minWidth: 720 }}>
-              <thead><tr><th>Producto / lotes</th><th style={{ textAlign: 'right' }}>En secado</th><th style={{ textAlign: 'right' }}>Físico 1ª</th><th style={{ textAlign: 'right' }}>Reservado</th><th style={{ textAlign: 'right' }}>Disponible</th><th style={{ textAlign: 'right' }}>Cajas</th><th style={{ textAlign: 'right' }}>Segunda</th><th></th></tr></thead>
+            <table className="tabla" style={{ minWidth: 620 }}>
+              <thead><tr><th>Producto / lotes</th><th style={{ textAlign: 'right' }}>En secado</th><th style={{ textAlign: 'right' }}>Físico 1ª</th><th style={{ textAlign: 'right' }}>Reservado</th><th style={{ textAlign: 'right', fontSize: '1.05rem', color: 'var(--ok)' }}>DISPONIBLE</th><th></th></tr></thead>
               <tbody>
                 {visibles.map((p) => (
                   <tr key={p.id}>
@@ -124,9 +124,10 @@ export default function Inventario({ session, perfil }) {
                     <td style={{ textAlign: 'right', color: p.en_secado ? 'var(--aviso)' : undefined }}>{p.en_secado ? `${num(p.en_secado, 2)} ${p.unidad}` : '—'}</td>
                     <td style={{ textAlign: 'right' }}>{num(p.fisico_primera, 2)}</td>
                     <td style={{ textAlign: 'right' }}>{num(p.reservado, 2)}</td>
-                    <td style={{ textAlign: 'right' }}><strong>{num(p.disponible_primera, 2)}</strong> <small style={{ color: 'var(--text-dim)' }}>{p.unidad}</small></td>
-                    <td style={{ textAlign: 'right' }}>{p.cajas_disponibles ?? '—'}</td>
-                    <td style={{ textAlign: 'right' }}>{num(p.fisico_segunda, 2)}</td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap', background: 'color-mix(in srgb, var(--ok) 9%, transparent)', minWidth: 130 }}>
+                      <strong style={{ fontSize: '1.7rem', lineHeight: 1.1, fontWeight: 800, color: p.disponible_primera > 0 ? 'var(--ok)' : 'var(--text-dim)' }}>{num(p.disponible_primera, 2)}</strong>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{p.unidad}</div>
+                    </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {escribe && <button className="boton-sm boton-secundario" onClick={() => abrir('inicial', p)}>Existencia inicial</button>}{' '}
                       {escribe && <button className="boton-sm boton-secundario" onClick={() => abrir('conteo', p, p.lotes[0])}>Conteo</button>}{' '}
@@ -135,7 +136,7 @@ export default function Inventario({ session, perfil }) {
                   </tr>
                 ))}
                 {visibles.length === 0 && (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
+                  <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
                     {filas.length === 0 ? 'Sin productos de piedra. Créalos en Catálogo.' : 'No hay resultados con estos filtros.'}
                     {hayFiltro && <> <button className="boton-sm boton-secundario" onClick={limpiar}>Limpiar filtros</button></>}
                   </td></tr>
@@ -174,7 +175,6 @@ export default function Inventario({ session, perfil }) {
           pie={<button className="boton-sm" disabled={!d.lote || (modal.tipo === 'conteo' ? d.contado === '' : !d.m2 || !d.motivo)} onClick={enviar}>Registrar</button>}>
           <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <Campo etiqueta="Lote" ancho={170}><input value={d.lote} onChange={(e) => set('lote', e.target.value)} placeholder={modal.tipo === 'inicial' ? 'Ej.: INICIAL-01' : 'Lote'} list="lotes" /><datalist id="lotes">{modal.producto.lotes.map((l) => <option key={l.lote + l.calidad} value={l.lote} />)}</datalist></Campo>
-            <Campo etiqueta="Calidad" ancho={130}><select value={d.calidad} onChange={(e) => set('calidad', e.target.value)}><option value="primera">Primera</option><option value="segunda">Segunda</option></select></Campo>
             {modal.tipo === 'conteo'
               ? <Campo etiqueta={`Contado (${modal.producto.unidad})`} ancho={150} ayuda="Cuenta lo que hay físicamente; el sistema calcula la diferencia"><input type="number" step="0.001" value={d.contado} onChange={(e) => set('contado', e.target.value)} /></Campo>
               : <Campo etiqueta={modal.producto.unidad} ancho={130} ayuda={modal.tipo === 'ajuste' ? 'Negativo para restar' : undefined}><input type="number" step="0.001" value={d.m2} onChange={(e) => set('m2', e.target.value)} /></Campo>}
