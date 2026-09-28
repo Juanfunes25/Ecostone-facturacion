@@ -13,7 +13,6 @@ export const EMPRESA = {
   condicionesCotizacion: [
     'Precios en Lempiras.',
     'Cotización válida por 15 días a partir de su emisión.',
-    'Los m² se venden por caja completa; la cantidad entregada puede superar a la cotizada.',
     'Aceptamos efectivo, tarjeta y transferencia.',
   ],
 };

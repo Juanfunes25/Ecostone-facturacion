@@ -426,6 +426,13 @@ button:disabled {
   box-shadow: none;
 }
 
+.boton-md {
+  width: auto;
+  padding: 11px 24px;
+  font-size: 1rem;
+  box-shadow: none;
+}
+
 .boton-secundario {
   background: transparent;
   border: 1px solid var(--border);

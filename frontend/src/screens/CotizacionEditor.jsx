@@ -23,11 +23,12 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
 
   useEffect(() => {
     (async () => {
-      const [productos, listas, pr, params] = await Promise.all([
+      const [productos, listas, pr, params, inventario] = await Promise.all([
         api.get('/productos', session), api.get('/listas-precio', session), api.get('/listas-precio/precios', session), api.get('/insumos/parametros', session),
+        api.get('/inventario/pt', session).catch(() => []),
       ]);
       const parametros = Object.fromEntries(params.map((p) => [p.clave, Number(p.valor)]));
-      setCat({ productos, listas, precios: Object.fromEntries(pr.map((x) => [`${x.producto_id}|${x.lista_id}`, Number(x.precio)])), parametros });
+      setCat({ productos, listas, precios: Object.fromEntries(pr.map((x) => [`${x.producto_id}|${x.lista_id}`, Number(x.precio)])), parametros, stock: new Map(inventario.map((i) => [i.id, i])) });
       if (inicial) {
         setCli({ cliente_id: inicial.cliente_id ?? '', nombre_cliente: inicial.nombre_cliente, rtn_cliente: inicial.rtn_cliente ?? '', telefono: inicial.telefono ?? '', email: inicial.email ?? '', tipo_cliente: inicial.clientes?.tipo_cliente ?? 'final', lista_precio_id: inicial.lista_precio_id ?? '', exento: !!inicial.clientes?.exento_impuestos });
         setEnc({ vigencia_dias: inicial.vigencia_dias, anticipo_pct: Number(inicial.anticipo_pct), notas: inicial.notas ?? '', descuento_pct: Number(inicial.descuento_pct) || '' });
@@ -160,9 +161,23 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
                 return (
                   <tr key={i}>
                     <td>
-                      {esProd && <select value={l.producto_id} onChange={(e) => setPiedra(i, e.target.value)}><option value="">Elige piedra…</option>{piedras.map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.color ? ` — ${p.color}` : ''}</option>)}</select>}
+                      {esProd && <select value={l.producto_id} onChange={(e) => setPiedra(i, e.target.value)}><option value="">Elige piedra…</option>{piedras.map((p) => { const st = cat.stock.get(p.id); return <option key={p.id} value={p.id}>{p.nombre}{st ? ` — ${st.disponible_primera > 0 ? `${num(st.disponible_primera, 1)} ${st.unidad} disp.` : 'sin existencia'}` : ''}</option>; })}</select>}
                       {esAcc && <select value={l.producto_id} onChange={(e) => setL(i, { producto_id: e.target.value, unidad: porId.get(e.target.value)?.unidad_venta ?? 'unidad', precio_unitario: '' })}><option value="">Elige accesorio…</option>{accs.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>}
                       {!esProd && !esAcc && <input placeholder="Descripción" value={l.descripcion} onChange={(e) => setL(i, { descripcion: e.target.value })} />}
+                      {esProd && r?.p && (() => {
+                        const st = cat.stock.get(r.p.id);
+                        if (!st) return null;
+                        const pide = r.p.unidad_venta === 'caja' ? r.cantidad : (r.dim?.m2_entregado ?? r.cantidad);
+                        const alcanza = st.disponible_primera >= pide;
+                        return (
+                          <small style={{ display: 'block', marginTop: 3, color: pide > 0 && !alcanza ? 'var(--peligro)' : 'var(--text-dim)' }}>
+                            En inventario: <strong>{num(st.disponible_primera, 2)} {st.unidad}</strong> disponibles
+                            {st.reservado > 0 && ` (${num(st.reservado, 2)} reservados)`}
+                            {st.en_secado > 0 && ` · ${num(st.en_secado, 2)} en secado`}
+                            {pide > 0 && (alcanza ? ' · ✔ alcanza' : ` · faltan ${num(pide - st.disponible_primera, 2)} ${st.unidad}: al aprobar se ordenará producir`)}
+                          </small>
+                        );
+                      })()}
                       {r?.p && r.precio_unitario < r.precio_lista * 0.995 && <small style={{ color: 'var(--peligro)' }}>Bajo lista ({L(r.precio_lista)})</small>}
                     </td>
                     <td>{esProd && <input type="number" step="0.01" value={l.m2_neto} onChange={(e) => setL(i, { m2_neto: e.target.value })} />}</td>
