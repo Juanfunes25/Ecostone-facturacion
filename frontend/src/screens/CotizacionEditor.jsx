@@ -186,7 +186,7 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
                       {esProd && r?.dim ? (
                         <span>
                           <strong>{num(r.dim.cantidad, 0)} {r.dim.unidad_linea === 'caja' ? 'cajas' : r.p?.unidad_venta === 'm2' ? 'm²' : r.dim.unidad_linea}</strong>
-                          {r.dim.unidad_linea === 'caja' && r.dim.factor_precio !== 1 && <small style={{ display: 'block', color: 'var(--text-dim)' }}>= {num(r.dim.m2_entregado, 2)} m² · {L(r.precio_lista)} por caja</small>}
+                          {r.dim.unidad_linea === 'caja' && r.p?.unidad_venta === 'm2' && <small style={{ display: 'block', color: 'var(--text-dim)' }}>= {num(r.dim.m2_entregado, 2)} m² (cajas de {num(r.p.m2_por_caja, 2)} m²){r.dim.factor_precio !== 1 && ` · ${L(r.precio_lista)} por caja`}</small>}
                         </span>)
                         : <span style={{ display: 'flex', gap: 4 }}><input type="number" inputMode="numeric" step="1" min="1" value={l.cantidad} onChange={(e) => setL(i, { cantidad: entero(e.target.value) })} /><small>{l.unidad}</small></span>}
                     </td>
