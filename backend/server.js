@@ -1,0 +1,116 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { db } from './db.js';
+import { requireAuth } from './middleware/auth.js';
+import { categorias } from './routes/categorias.js';
+import { productos } from './routes/productos.js';
+import { clientes } from './routes/clientes.js';
+import { puntosEmision } from './routes/puntosEmision.js';
+import { ventas } from './routes/ventas.js';
+import { notasCredito } from './routes/notasCredito.js';
+import { cierres } from './routes/cierres.js';
+import { reportes } from './routes/reportes.js';
+import { cajaChica } from './routes/cajaChica.js';
+import { usuarios } from './routes/usuarios.js';
+import { facturaImpresion } from './routes/facturaImpresion.js';
+import { sucursales } from './routes/sucursales.js';
+import { dashboard } from './routes/dashboard.js';
+import { auditoria } from './routes/auditoria.js';
+import { antifraude } from './routes/antifraude.js';
+import { requireRole } from './middleware/requireRole.js';
+import { iniciarVigilancia, registrarLoginFallido } from './lib/antifraude.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+// Diagnóstico sin login: confirma si SUPABASE_SERVICE_ROLE_KEY quedó bien
+// configurada en el entorno de despliegue, sin tener que entrar a la app.
+app.get('/api/health/db', async (req, res) => {
+  const { error } = await db.from('sucursales').select('id').limit(1);
+  if (error) return res.status(500).json({ ok: false, error: error.message });
+  res.json({ ok: true });
+});
+
+// Intentos fallidos de inicio de sesión (el login lo hace Supabase desde
+// el navegador; la pantalla avisa aquí cuando falla). Sin token, con tope
+// por IP para que no se pueda abusar.
+const fallidosPorIp = new Map();
+app.post('/api/sesion/login-fallido', async (req, res) => {
+  const ip = String(req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? '').split(',')[0].trim();
+  const minuto = Math.floor(Date.now() / 60000);
+  const clave = `${ip}:${minuto}`;
+  const n = (fallidosPorIp.get(clave) ?? 0) + 1;
+  fallidosPorIp.set(clave, n);
+  if (fallidosPorIp.size > 5000) fallidosPorIp.clear();
+  if (n > 20) return res.status(429).end();
+  await registrarLoginFallido(req, req.body?.acceso);
+  res.status(204).end();
+});
+
+app.use('/api', requireAuth);
+
+// Perfil propio: sucursal, rol y flags (cierre ciego, sin horario)
+app.get('/api/perfil', (req, res) => res.json(req.perfil));
+
+app.get('/api/formas-pago', async (req, res) => {
+  const { data, error } = await db.from('formas_pago').select('*').order('nombre');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.use('/api/sucursales', sucursales);
+app.use('/api/categorias', categorias);
+app.use('/api/productos', productos);
+app.use('/api/clientes', clientes);
+app.use('/api/puntos-emision', puntosEmision);
+app.use('/api/ventas', ventas);
+app.use('/api/ventas', facturaImpresion); // /api/ventas/:id/ticket, /api/ventas/:id/pdf
+app.use('/api/notas-credito', notasCredito);
+app.use('/api/cierres', cierres);
+// Reportes, dashboard y caja chica son de gerencia: antes cualquier cajero
+// logueado podía pedir las ventas de todas las sucursales por la API.
+app.use('/api/reportes', requireRole('admin', 'gerente'), reportes);
+app.use('/api/caja-chica', requireRole('admin', 'gerente'), cajaChica);
+app.use('/api/usuarios', usuarios);
+app.use('/api/dashboard', requireRole('admin', 'gerente'), dashboard);
+app.use('/api/auditoria', auditoria);
+app.use('/api/antifraude', antifraude);
+
+// Sirve el build del frontend (un solo servicio Render, backend + frontend estático).
+const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
+// index.html y el service worker nunca se cachean en el navegador: así
+// cada caja detecta la versión nueva apenas se publica.
+app.use(
+  express.static(frontendDist, {
+    setHeaders(res, ruta) {
+      if (/(index\.html|sw\.js|registerSW\.js|manifest\.webmanifest)$/.test(ruta)) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    },
+  })
+);
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(frontendDist, 'index.html'));
+});
+
+app.use('/api', (req, res) => res.status(404).json({ error: 'No encontrado' }));
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Error interno' });
+});
+
+const port = process.env.PORT || 4200;
+app.listen(port, () => {
+  console.log(`ecostone-facturacion backend escuchando en :${port}`);
+  iniciarVigilancia();
+});
