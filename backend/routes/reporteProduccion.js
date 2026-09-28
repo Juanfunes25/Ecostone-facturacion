@@ -8,7 +8,7 @@ import { round2, round3 } from '../lib/cotizacion.js';
 import { traerTodo, traerPorIds } from '../lib/consultas.js';
 
 // Panorama de producción: qué se produjo, quién, cuánto material se gastó, qué
-// está curando, cuánto hay en inventario y qué alertas hay.
+// está en producción, cuánto hay en inventario y qué alertas hay.
 export const reporteProduccion = Router();
 
 reporteProduccion.get('/', requireRole('admin', 'gerente'), async (req, res) => {
@@ -42,8 +42,8 @@ reporteProduccion.get('/', requireRole('admin', 'gerente'), async (req, res) => 
       registros: ordenes.length,
       m2_producidos: suma(m2s, (o) => o.m2_planificado),
       cajas_esquina_producidas: suma(ordenes.filter((o) => uni(o) === 'cajas'), (o) => o.m2_planificado),
-      en_curado_m2: suma(m2s.filter((o) => o.estado === 'curando'), (o) => o.m2_planificado),
-      en_curado_lotes: ordenes.filter((o) => o.estado === 'curando').length,
+      en_produccion_m2: suma(m2s.filter((o) => o.estado === 'curando'), (o) => o.m2_planificado),
+      en_produccion_lotes: ordenes.filter((o) => o.estado === 'curando').length,
       liberado_m2: bueno, segunda_m2: segunda, merma_m2: merma,
       merma_pct: bueno + segunda + merma > 0 ? round2((merma / (bueno + segunda + merma)) * 100) : 0,
       costo_insumos: round2(ordenes.reduce((s, o) => s + Number(o.costo_mp ?? 0), 0)),

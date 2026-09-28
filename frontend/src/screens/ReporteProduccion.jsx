@@ -7,7 +7,7 @@ import { descargarCsv } from '../lib/csv.js';
 
 const hora = (iso) => new Date(iso).toLocaleString('es-HN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Tegucigalpa' });
 const TONO = { curando: 'aviso', terminada: 'ok', planificada: 'info', cancelada: 'gris' };
-const TXT = { curando: 'curando', terminada: 'en inventario', planificada: 'pendiente', cancelada: 'cancelada' };
+const TXT = { curando: 'en secado', terminada: 'lista para vender', planificada: 'por iniciar', cancelada: 'cancelada' };
 
 // Panorama de producción: todo lo que pasa en planta en una sola pantalla.
 export default function ReporteProduccion({ session, perfil }) {
@@ -53,8 +53,8 @@ export default function ReporteProduccion({ session, perfil }) {
         <>
           <Kpis items={[
             { titulo: 'Producido', valor: `${num(d.kpis.m2_producidos, 1)} m²`, pie: `${d.kpis.registros} registros${d.kpis.cajas_esquina_producidas ? ` · ${num(d.kpis.cajas_esquina_producidas, 0)} cajas de esquina` : ''}` },
-            { titulo: 'Curando ahora', valor: `${num(d.kpis.en_curado_m2, 1)} m²`, pie: `${d.kpis.en_curado_lotes} lotes esperando el fin del curado` },
-            { titulo: 'Ya en inventario', valor: `${num(d.kpis.liberado_m2, 1)} m²`, pie: d.kpis.segunda_m2 ? `+ ${num(d.kpis.segunda_m2, 1)} m² de segunda` : 'primera calidad' },
+            { titulo: 'En secado', valor: `${num(d.kpis.en_produccion_m2, 1)} m²`, pie: `${d.kpis.en_produccion_lotes} lotes que aún no pasan a lista para vender` },
+            { titulo: 'Lista para vender', valor: `${num(d.kpis.liberado_m2, 1)} m²`, pie: d.kpis.segunda_m2 ? `+ ${num(d.kpis.segunda_m2, 1)} m² de segunda` : 'primera calidad' },
             { titulo: 'Merma', valor: `${num(d.kpis.merma_pct, 1)}%`, pie: `${num(d.kpis.merma_m2, 1)} m² perdidos` },
             ...(gerencia ? [
               { titulo: 'Insumos consumidos', valor: L(d.kpis.costo_insumos), pie: 'a costo promedio' },
@@ -104,7 +104,7 @@ export default function ReporteProduccion({ session, perfil }) {
               <h2>Inventario de piedra hoy</h2>
               <table className="tabla"><tbody>
                 {d.inventario.map((i) => <tr key={i.nombre}><td>{i.nombre}</td><td style={{ textAlign: 'right' }}><strong>{num(i.disponible, 1)}</strong> {i.unidad} disp.{i.fisico !== i.disponible && <small style={{ display: 'block', color: 'var(--text-dim)' }}>{num(i.fisico, 1)} físicos (hay reservas)</small>}</td></tr>)}
-                {d.inventario.length === 0 && <tr><td style={{ color: 'var(--text-dim)' }}>Aún no hay piedra en inventario (entra al terminar el curado).</td></tr>}
+                {d.inventario.length === 0 && <tr><td style={{ color: 'var(--text-dim)' }}>Aún no hay piedra en inventario (entra al pasar a lista para vender).</td></tr>}
               </tbody></table>
             </div>
             <div className="panel">
@@ -142,7 +142,7 @@ export default function ReporteProduccion({ session, perfil }) {
             <h2>Registros del operario (detalle)</h2>
             <div style={{ overflowX: 'auto' }}>
               <table className="tabla" style={{ minWidth: 640 }}>
-                <thead><tr><th>Fecha y hora</th><th>Operario</th><th>Producto</th><th style={{ textAlign: 'right' }}>Cantidad</th><th>Lote</th><th>Estado</th><th>Disponible</th></tr></thead>
+                <thead><tr><th>Fecha y hora</th><th>Operario</th><th>Producto</th><th style={{ textAlign: 'right' }}>Cantidad</th><th>Lote</th><th>Estado</th><th>Lista para vender</th></tr></thead>
                 <tbody>
                   {d.registros.map((r) => (
                     <tr key={r.id}><td>{hora(r.registrado_at)}</td><td>{r.operario}</td><td>{r.producto}</td><td style={{ textAlign: 'right' }}>{num(r.cantidad, 2)} {r.unidad}</td><td>{r.lote}</td>

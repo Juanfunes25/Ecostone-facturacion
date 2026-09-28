@@ -129,9 +129,8 @@ export async function reservarCotizacion(req, cotizacion, lineas) {
       if (porProducir > 0) {
         try {
           const receta = await recetaActiva(productoId);
-          const dias = Number(receta?.dias_curado ?? 7);
           const params = await obtenerParametros();
-          void params;
+          const dias = numero(params.dias_a_inventario, 5);
           const hoy = hoyHn();
           let programada = sumarDias(hoy, 1);
           if (cotizacion.fecha_entrega) {

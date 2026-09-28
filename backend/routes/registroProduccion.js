@@ -10,7 +10,7 @@ import { inicioDelDia } from '../lib/fechas.js';
 
 // Registro de producción desde el celular del operario: elige el modelo y la
 // cantidad, envía, y el sistema guarda fecha/hora/usuario, descuenta la materia
-// prima según la receta y deja el lote curando hasta que pase a inventario.
+// prima según la receta y deja el lote en producción hasta que pase a inventario (5 días por defecto).
 export const registroProduccion = Router();
 const ROLES = ['produccion', 'admin', 'gerente'];
 const unidadDe = (p) => (p.unidad_venta === 'caja' ? 'cajas' : 'm²');

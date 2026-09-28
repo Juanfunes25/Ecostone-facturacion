@@ -14,7 +14,7 @@ Cotización ─► (cliente acepta) Aprobada ─► Cobro (anticipo / pago) ─�
                     │                                                   
                     ├─ reserva piedra en bodega (FIFO por lote)
                     └─ lo que falta ─► Orden de producción ─► Colada (descuenta insumos)
-                                        ─► Curado ─► Control de calidad ─► Inventario
+                                        ─► En secado ─(5 días o desplegable)─► Lista para vender = Inventario
 ```
 
 ## Módulos
@@ -23,9 +23,9 @@ Cotización ─► (cliente acepta) Aprobada ─► Cobro (anticipo / pago) ─�
 |---|---|
 | Cotizaciones | m² netos + desperdicio → cajas completas, accesorios sugeridos por rendimiento, flete, instalación, ISV incluido o separado según la lista, PDF de marca y correo |
 | Catálogo de piedra | Modelo + color, unidad de venta (m², caja, pieza, ml…), listas Público / Contratista / Distribuidor |
-| Registrar producción (celular) | Usuario `productor` (rol producción): elige modelo, color y cantidad, envía; se guarda fecha, hora y usuario, se descuenta la materia prima según la receta y el lote pasa solo a inventario al terminar el curado |
-| Reporte de producción | Panorama: producido por día/modelo/operario, curando, liberado, merma, consumo real vs receta, insumos críticos, inventario, alertas y detalle de registros |
-| Producción | Órdenes con lote, colada, curado, cierre con 1ª / 2ª / merma, calidad (ASTM C1670), MRP de compras, agenda, moldes |
+| Registrar producción (celular) | Usuario `productor` (rol producción): elige modelo, color y cantidad, envía; se guarda fecha, hora y usuario, se descuenta la materia prima según la receta y el lote queda "en secado" y pasa solo a "lista para vender" (inventario) a los 5 días, o antes con el desplegable |
+| Reporte de producción | Panorama: producido por día/modelo/operario, en secado, lista para vender, merma, consumo real vs receta, insumos críticos, inventario, alertas y detalle de registros |
+| Producción | Órdenes con lote, colada, secado, paso a lista para vender con 1ª / 2ª / merma, calidad (ASTM C1670), MRP de compras, agenda, moldes |
 | Recetas y costos | Insumos por m², merma, mano de obra, indirectos → costo por m² y margen |
 | Insumos | Kardex, costo promedio ponderado, compras en L o US$, proveedores, mínimos |
 | Inventario | Producto terminado por lote y calidad; físico, reservado y disponible; conteo sorpresa |

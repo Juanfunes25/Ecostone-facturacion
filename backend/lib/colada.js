@@ -9,7 +9,7 @@ import { hoyHn, reservarCotizacion, sumarDias } from './produccion.js';
 export const reqSistema = { headers: {}, socket: {}, perfil: null, originalUrl: '/sistema', method: 'SISTEMA' };
 
 // Colada: descuenta los insumos del inventario (según la receta o lo que se indique)
-// y empieza el curado. forzar=true registra aunque falte existencia (la producción
+// y arranca la cuenta para pasar a inventario. forzar=true registra aunque falte existencia (la producción
 // ya ocurrió en planta): queda stock negativo y una alerta para que se cargue la compra.
 export async function colarOrden(req, orden, { reales = null, forzar = false } = {}) {
   const { data: consumos } = await db.from('orden_consumos').select('*, materias_primas(nombre, unidad)').eq('orden_id', orden.id);
@@ -46,8 +46,7 @@ export async function colarOrden(req, orden, { reales = null, forzar = false } =
     if (teo > 0 && (Math.abs(real - teo) / teo) * 100 > tolerancia) desvios.push({ insumo: c.materias_primas.nombre, teorico: teo, real, desvio_pct: round2(((real - teo) / teo) * 100) });
   }
 
-  const { data: receta } = orden.receta_id ? await db.from('recetas').select('dias_curado').eq('id', orden.receta_id).maybeSingle() : { data: null };
-  const dias = numero(receta?.dias_curado, 7);
+  const dias = numero(params.dias_a_inventario, 5);
   const { data: actualizada, error } = await db.from('ordenes_produccion').update({ estado: 'curando', fecha_colado: new Date().toISOString(), fecha_disponible: sumarDias(hoyHn(), dias), costo_mp: round2(costoMp), responsable_id: orden.responsable_id ?? req.perfil?.id ?? null }).eq('id', orden.id).select().single();
   if (error) throw new Error(error.message);
   if (orden.molde_id && orden.coladas) {
@@ -64,7 +63,7 @@ export async function colarOrden(req, orden, { reales = null, forzar = false } =
   return { orden: actualizada, desvios, faltantes, consumido };
 }
 
-// Fin del curado: el producto terminado entra al inventario y se calcula el costo real.
+// Pasa a inventario: el producto terminado entra al inventario y se calcula el costo real.
 export async function terminarOrden(req, orden, { bueno, segunda = 0, merma = 0, motivoAnticipado = '', automatica = false }) {
   const { data: receta } = orden.receta_id ? await db.from('recetas').select('mano_obra_m2, indirectos_m2').eq('id', orden.receta_id).maybeSingle() : { data: null };
   const { data: controles } = await db.from('controles_calidad').select('resultado').eq('orden_id', orden.id);
@@ -107,7 +106,7 @@ export async function terminarOrden(req, orden, { bueno, segunda = 0, merma = 0,
   return { orden: actualizada, merma_pct: mermaPct, rendimiento_pct: rendimiento, sin_control_calidad: !(controles ?? []).length, reserva };
 }
 
-// Libera solas las producciones cuyo curado ya terminó (entran al inventario con
+// Pasa solas a inventario las producciones que cumplieron sus días (entran con
 // lo registrado por el operario). Si hay un control de calidad rechazado se deja
 // para revisión de gerencia. Se llama con un temporizador y al abrir pantallas.
 let corriendo = false;

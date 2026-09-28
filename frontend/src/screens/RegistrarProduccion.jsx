@@ -4,7 +4,7 @@ import { num } from '../lib/fmt.js';
 
 const hora = (iso) => new Date(iso).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Tegucigalpa' });
 const dia = (iso) => new Date(iso).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Tegucigalpa' });
-const ESTADO = { curando: ['Curando', 'var(--aviso)'], terminada: ['En inventario', 'var(--ok)'], planificada: ['Pendiente', 'var(--info)'], cancelada: ['Cancelada', 'var(--text-dim)'] };
+const ESTADO = { curando: ['En secado', 'var(--aviso)'], terminada: ['Lista para vender', 'var(--ok)'], planificada: ['Por iniciar', 'var(--info)'], cancelada: ['Cancelada', 'var(--text-dim)'] };
 
 const boton = (activo) => ({
   minHeight: 56, padding: '10px 14px', borderRadius: 14, fontSize: '1.05rem', fontWeight: 600, cursor: 'pointer',
@@ -75,7 +75,7 @@ export default function RegistrarProduccion({ session, perfil }) {
         <div className="panel" style={{ borderLeft: '6px solid var(--ok)' }}>
           <h2 style={{ marginTop: 0, color: 'var(--ok)' }}>✔ Producción registrada</h2>
           <p style={{ fontSize: '1.2rem', margin: '4px 0' }}><strong>{num(resultado.cantidad, 2)} {resultado.unidad}</strong> de {resultado.producto}</p>
-          <p style={{ margin: '4px 0', color: 'var(--text-dim)' }}>Lote {resultado.lote} · {dia(resultado.registrado_at)} {hora(resultado.registrado_at)} · pasa a inventario el {resultado.disponible_desde}</p>
+          <p style={{ margin: '4px 0', color: 'var(--text-dim)' }}>Lote {resultado.lote} · {dia(resultado.registrado_at)} {hora(resultado.registrado_at)} · queda lista para vender el {resultado.disponible_desde}</p>
           {resultado.avisos.map((a) => <div key={a} className="error" style={{ marginTop: 8 }}>{a}</div>)}
           <button style={{ ...boton(true), width: '100%', marginTop: 12 }} onClick={() => setResultado(null)}>Registrar otra</button>
         </div>

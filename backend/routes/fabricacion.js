@@ -63,10 +63,10 @@ async function guardarItems(recetaId, items) {
 
 fabricacion.post('/recetas', requireRole(...GERENCIA), async (req, res) => {
   try {
-    const { producto_id, nombre, merma_esperada_pct, mano_obra_m2, indirectos_m2, dias_curado, horas_desmolde, notas, items } = req.body;
+    const { producto_id, nombre, merma_esperada_pct, mano_obra_m2, indirectos_m2, notas, items } = req.body;
     if (!producto_id || !String(nombre ?? '').trim()) throw new Error('Producto y nombre de la receta son obligatorios');
     await db.from('recetas').update({ activa: false }).eq('producto_id', producto_id).eq('activa', true);
-    const { data, error } = await db.from('recetas').insert({ producto_id, nombre: nombre.trim(), merma_esperada_pct: numero(merma_esperada_pct, 5), mano_obra_m2: numero(mano_obra_m2), indirectos_m2: numero(indirectos_m2), dias_curado: numero(dias_curado, 7), horas_desmolde: numero(horas_desmolde, 24), notas }).select().single();
+    const { data, error } = await db.from('recetas').insert({ producto_id, nombre: nombre.trim(), merma_esperada_pct: numero(merma_esperada_pct, 5), mano_obra_m2: numero(mano_obra_m2), indirectos_m2: numero(indirectos_m2), notas }).select().single();
     if (error) throw new Error(error.message);
     try {
       await guardarItems(data.id, items);
@@ -84,11 +84,11 @@ fabricacion.post('/recetas', requireRole(...GERENCIA), async (req, res) => {
 
 fabricacion.put('/recetas/:id', requireRole(...GERENCIA), async (req, res) => {
   try {
-    const { nombre, merma_esperada_pct, mano_obra_m2, indirectos_m2, dias_curado, horas_desmolde, notas, items, activa } = req.body;
+    const { nombre, merma_esperada_pct, mano_obra_m2, indirectos_m2, notas, items, activa } = req.body;
     const { data: antes } = await db.from('recetas').select('*').eq('id', req.params.id).single();
     if (!antes) return res.status(404).json({ error: 'Receta no encontrada' });
     if (activa === true && !antes.activa) await db.from('recetas').update({ activa: false }).eq('producto_id', antes.producto_id).eq('activa', true);
-    const { data, error } = await db.from('recetas').update({ nombre, merma_esperada_pct, mano_obra_m2, indirectos_m2, dias_curado, horas_desmolde, notas, activa }).eq('id', req.params.id).select().single();
+    const { data, error } = await db.from('recetas').update({ nombre, merma_esperada_pct, mano_obra_m2, indirectos_m2, notas, activa }).eq('id', req.params.id).select().single();
     if (error) throw new Error(error.message);
     if (items) await guardarItems(data.id, items);
     const costo = await actualizarCostoEstandar(data.producto_id);
@@ -138,7 +138,7 @@ fabricacion.post('/ordenes', requireRole(...PRODUCE), async (req, res) => {
   }
 });
 
-// Colada: se descuentan los insumos reales del inventario y empieza el curado.
+// Colada: se descuentan los insumos reales del inventario y empieza la cuenta para pasar a inventario.
 fabricacion.post('/ordenes/:id/colar', requireRole(...PRODUCE), async (req, res) => {
   try {
     const { data: orden } = await db.from('ordenes_produccion').select('*').eq('id', req.params.id).single();
@@ -152,26 +152,25 @@ fabricacion.post('/ordenes/:id/colar', requireRole(...PRODUCE), async (req, res)
   }
 });
 
-// Fin del curado: entra producto terminado al inventario y se calcula el costo real.
-fabricacion.post('/ordenes/:id/terminar', requireRole(...PRODUCE), async (req, res) => {
+// Lista para vender: entra el producto terminado al inventario y se calcula el costo real.
+// Se llama desde el desplegable de estado (o solo pasa a los N días). Por defecto entra lo
+// que registró el operario; se pueden ajustar m² de segunda y merma.
+fabricacion.post('/ordenes/:id/terminar', requireRole('admin', 'gerente', 'bodega'), async (req, res) => {
   try {
     const { data: orden } = await db.from('ordenes_produccion').select('*').eq('id', req.params.id).single();
     if (!orden) return res.status(404).json({ error: 'Orden no encontrada' });
-    if (orden.estado !== 'curando') throw new Error('Solo se puede terminar una orden que ya fue colada y está curando');
-    const bueno = round3(numero(req.body.m2_bueno));
+    if (orden.estado !== 'curando') throw new Error('Solo pasa a "lista para vender" una producción que está en secado');
+    const bueno = req.body.m2_bueno === undefined || req.body.m2_bueno === '' ? Number(orden.m2_planificado) : round3(numero(req.body.m2_bueno));
     const segunda = round3(numero(req.body.m2_segunda));
     const merma = round3(numero(req.body.m2_merma));
-    if (bueno < 0 || segunda < 0 || merma < 0) throw new Error('Los m² no pueden ser negativos');
-    if (bueno + segunda <= 0) throw new Error('Indica cuántos m² buenos (o de segunda) salieron');
-    const motivo = String(req.body.motivo_anticipado ?? '').trim();
-    if (orden.fecha_disponible && orden.fecha_disponible > hoyHn() && !(motivo && GERENCIA.includes(req.perfil.rol))) {
-      throw new Error(`El curado termina el ${orden.fecha_disponible}. Solo gerencia puede liberarla antes, con motivo.`);
-    }
+    if (bueno < 0 || segunda < 0 || merma < 0) throw new Error('Las cantidades no pueden ser negativas');
+    if (bueno + segunda <= 0) throw new Error('Indica cuántos salieron buenos (o de segunda)');
     const { data: controles } = await db.from('controles_calidad').select('resultado').eq('orden_id', orden.id);
-    if ((controles ?? []).some((c) => c.resultado === 'rechazado') && req.perfil.rol === 'produccion') {
-      throw new Error('Hay un control de calidad RECHAZADO en esta orden: gerencia debe revisarla antes de liberar el lote');
+    if ((controles ?? []).some((c) => c.resultado === 'rechazado') && !GERENCIA.includes(req.perfil.rol)) {
+      throw new Error('Hay un control de calidad RECHAZADO en esta producción: gerencia debe revisarla antes de pasarla a lista para vender');
     }
-    const r = await terminarOrden(req, orden, { bueno, segunda, merma, motivoAnticipado: motivo });
+    const antes = orden.fecha_disponible && orden.fecha_disponible > hoyHn();
+    const r = await terminarOrden(req, orden, { bueno, segunda, merma, motivoAnticipado: antes ? `manual, antes del ${orden.fecha_disponible}` : '' });
     res.json({ ...r.orden, merma_pct: r.merma_pct, rendimiento_pct: r.rendimiento_pct, sin_control_calidad: r.sin_control_calidad, reserva: r.reserva });
   } catch (e) {
     fallo(res, e);
@@ -255,7 +254,7 @@ fabricacion.get('/agenda', requireRole(...LEE, 'vendedor'), async (req, res) => 
   const eventos = [];
   for (const o of ordenes ?? []) {
     if (o.estado === 'planificada' && o.fecha_programada) eventos.push({ fecha: o.fecha_programada, tipo: 'colada', titulo: `Colar ${o.lote} · ${o.productos?.nombre}`, detalle: `${o.m2_planificado} m²${o.cotizaciones ? ` · Cot. #${o.cotizaciones.numero}` : ''}`, atrasado: o.fecha_programada < hoy, orden_id: o.id });
-    if (o.estado === 'curando' && o.fecha_disponible) eventos.push({ fecha: o.fecha_disponible, tipo: 'curado', titulo: `Fin de curado ${o.lote} · ${o.productos?.nombre}`, detalle: `${o.m2_planificado} m²`, atrasado: o.fecha_disponible < hoy, orden_id: o.id });
+    if (o.estado === 'curando' && o.fecha_disponible) eventos.push({ fecha: o.fecha_disponible, tipo: 'inventario', titulo: `Pasa a inventario ${o.lote} · ${o.productos?.nombre}`, detalle: `${o.m2_planificado} m²`, atrasado: o.fecha_disponible < hoy, orden_id: o.id });
   }
   for (const c of cots ?? []) eventos.push({ fecha: c.fecha_entrega, tipo: 'entrega', titulo: `Entrega Cot. #${c.numero} · ${c.proyecto || c.nombre_cliente}`, detalle: c.proyecto ? c.nombre_cliente : '', atrasado: c.fecha_entrega < hoy && c.estado === 'aprobada', cotizacion_id: c.id });
   res.json(eventos.filter((e) => e.fecha >= desde && e.fecha <= hasta).sort((a, b) => a.fecha.localeCompare(b.fecha)));

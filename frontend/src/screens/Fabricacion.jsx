@@ -4,10 +4,11 @@ import Modal, { Campo, Etiqueta, Kpis, Pestanas } from '../components/Modal.jsx'
 import { L, num, fechaCorta, hoyIso } from '../lib/fmt.js';
 
 const TONO = { planificada: 'info', curando: 'aviso', terminada: 'ok', cancelada: 'gris' };
-const TIPO_AGENDA = { colada: ['Colada', 'info'], curado: ['Fin de curado', 'aviso'], entrega: ['Entrega', 'ok'] };
+const TIPO_AGENDA = { colada: ['Colada', 'info'], inventario: ['Lista para vender', 'ok'], entrega: ['Entrega', 'ok'] };
+const ESTADO = { planificada: 'Por iniciar', curando: 'En secado', terminada: 'Lista para vender', cancelada: 'Cancelada' };
 const PARAM_TEXTO = {
   tipo_cambio_usd: 'Tipo de cambio (L por US$)', desperdicio_default_pct: 'Desperdicio sugerido en cotización (%)', vigencia_cotizacion_dias: 'Vigencia de cotización (días)',
-  anticipo_pct_default: 'Anticipo por defecto (%)', tolerancia_consumo_pct: 'Tolerancia consumo vs receta (%)', merma_maxima_pct: 'Merma máxima normal (%)',
+  anticipo_pct_default: 'Anticipo por defecto (%)', tolerancia_consumo_pct: 'Tolerancia consumo vs receta (%)', dias_a_inventario: 'Días en secado antes de pasar a lista para vender', merma_maxima_pct: 'Merma máxima normal (%)',
   descuento_max_vendedor_pct: 'Tope de descuento — vendedor (%)', descuento_max_gerente_pct: 'Tope de descuento — gerente (%)', coladas_por_molde_dia: 'Coladas por molde por día', isv_tasa: 'Tasa de ISV',
 };
 
@@ -54,7 +55,13 @@ export default function Fabricacion({ session, perfil }) {
 
   async function abrirDetalle(id) {
     const d = await api.get(`/fabricacion/ordenes/${id}`, session);
-    setDetalle({ orden: d, reales: Object.fromEntries(d.consumos.map((c) => [c.mp_id, c.teorico])), terminar: { m2_bueno: '', m2_segunda: 0, m2_merma: 0, motivo_anticipado: '' }, cal: { prueba: '', resultado: 'aprobado', valor: '', unidad: '', notas: '' } });
+    setDetalle({ orden: d, reales: Object.fromEntries(d.consumos.map((c) => [c.mp_id, c.teorico])), terminar: { m2_bueno: d.m2_planificado, m2_segunda: 0, m2_merma: 0 }, cal: { prueba: '', resultado: 'aprobado', valor: '', unidad: '', notas: '' } });
+  }
+  async function pasarAListo(x) {
+    const faltan = x.fecha_disponible && x.fecha_disponible > hoyIso();
+    const msg = `${x.lote}: ${num(x.m2_planificado, 2)} de ${x.productos?.nombre}.\n${faltan ? `Todavía está en secado hasta el ${fechaCorta(x.fecha_disponible)}. ` : ''}¿Pasarla ahora a "Lista para vender" y sumarla al inventario?`;
+    if (!window.confirm(msg)) return cargar();
+    await accion(() => api.post(`/fabricacion/ordenes/${x.id}/terminar`, session, {}), 'Lista para vender: ya está en el inventario.');
   }
   async function refrescarDetalle() { if (detalle) await abrirDetalle(detalle.orden.id); await cargar(); }
 
@@ -67,7 +74,7 @@ export default function Fabricacion({ session, perfil }) {
       {resumen && (
         <Kpis items={[
           { titulo: 'Por colar', valor: String(resumen.planificadas), pie: resumen.atrasadas ? `${resumen.atrasadas} atrasadas` : 'al día' },
-          { titulo: 'Curando', valor: String(resumen.curando), pie: `${num(resumen.m2_curando, 1)} m² · ${resumen.listas_para_liberar} listas para liberar` },
+          { titulo: 'En secado', valor: String(resumen.curando), pie: `${num(resumen.m2_curando, 1)} m² · ${resumen.listas_para_liberar} pasan hoy a lista para vender` },
           { titulo: 'm² disponibles', valor: num(resumen.m2_disponible_primera, 1), pie: `${num(resumen.m2_fisico_total, 1)} m² físicos en bodega` },
           { titulo: 'Insumos bajo mínimo', valor: String(resumen.insumos_bajo_minimo) },
         ]} />
@@ -79,7 +86,7 @@ export default function Fabricacion({ session, perfil }) {
 
       {pestana === 'tablero' && (
         <div className="panel">
-          <h2>Próximos 45 días: producción, curado y entregas</h2>
+          <h2>Próximos 45 días: producción y entregas</h2>
           <table className="tabla">
             <thead><tr><th style={{ width: 120 }}>Fecha</th><th style={{ width: 140 }}>Qué</th><th>Detalle</th><th></th></tr></thead>
             <tbody>
@@ -101,7 +108,7 @@ export default function Fabricacion({ session, perfil }) {
         <div className="panel">
           <div className="toolbar">
             <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-              <option value="planificada,curando">Activas</option><option value="planificada">Por colar</option><option value="curando">Curando</option><option value="terminada">Terminadas</option><option value="cancelada">Canceladas</option>
+              <option value="planificada,curando">Activas</option><option value="planificada">Por iniciar</option><option value="curando">En secado</option><option value="terminada">Listas para vender</option><option value="cancelada">Canceladas</option>
             </select>
             {produce && <button className="boton-sm" onClick={() => setNueva({ producto_id: '', m2_planificado: '', fecha_programada: '', molde_id: '', notas: '' })}>+ Orden de producción</button>}
           </div>
@@ -112,7 +119,12 @@ export default function Fabricacion({ session, perfil }) {
                 <tr key={x.id}>
                   <td><strong>{x.lote}</strong></td><td>{x.productos?.nombre}</td>
                   <td style={{ textAlign: 'right' }}>{num(x.estado === 'terminada' ? x.m2_bueno : x.m2_planificado, 2)}</td>
-                  <td><Etiqueta tono={TONO[x.estado]}>{x.estado}</Etiqueta>{x.atrasada && <> <Etiqueta tono="peligro">atrasada</Etiqueta></>}</td>
+                  <td>
+                    {x.estado === 'curando' && ['admin', 'gerente', 'bodega'].includes(perfil.rol)
+                      ? <select value="curando" onChange={(e) => e.target.value === 'terminada' && pasarAListo(x)}><option value="curando">En secado</option><option value="terminada">Lista para vender</option></select>
+                      : <Etiqueta tono={TONO[x.estado]}>{ESTADO[x.estado] ?? x.estado}</Etiqueta>}
+                    {x.atrasada && <> <Etiqueta tono="peligro">atrasada</Etiqueta></>}
+                  </td>
                   <td>{fechaCorta(x.fecha_programada)}</td><td>{fechaCorta(x.fecha_disponible)}</td>
                   <td>{x.cotizaciones ? `Cot. #${x.cotizaciones.numero}` : 'Stock'}</td>
                   <td><button className="boton-sm boton-secundario" onClick={() => abrirDetalle(x.id)}>Abrir</button></td>
@@ -204,7 +216,7 @@ export default function Fabricacion({ session, perfil }) {
       {o && (
         <Modal titulo={`Orden ${o.lote} — ${o.productos?.nombre}`} ancho={860} onCerrar={() => setDetalle(null)}>
           <div className="toolbar" style={{ flexWrap: 'wrap' }}>
-            <Etiqueta tono={TONO[o.estado]}>{o.estado}</Etiqueta>
+            <Etiqueta tono={TONO[o.estado]}>{ESTADO[o.estado] ?? o.estado}</Etiqueta>
             <span>{num(o.m2_planificado, 2)} m² planificados</span>
             <span>Programada: {fechaCorta(o.fecha_programada)}</span>
             {o.fecha_disponible && <span>Disponible: {fechaCorta(o.fecha_disponible)}</span>}
@@ -232,15 +244,14 @@ export default function Fabricacion({ session, perfil }) {
 
           {o.estado === 'curando' && produce && (
             <div style={{ marginTop: 12 }}>
-              <h3 style={{ margin: '0 0 6px' }}>Cerrar lote (fin de curado y conteo)</h3>
+              <h3 style={{ margin: '0 0 6px' }}>Pasar a lista para vender (entra al inventario)</h3>
               <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <Campo etiqueta="m² buenos (1ª)" ancho={140}><input type="number" step="0.01" value={detalle.terminar.m2_bueno} onChange={(e) => setDetalle({ ...detalle, terminar: { ...detalle.terminar, m2_bueno: e.target.value } })} /></Campo>
                 <Campo etiqueta="m² de segunda" ancho={140}><input type="number" step="0.01" value={detalle.terminar.m2_segunda} onChange={(e) => setDetalle({ ...detalle, terminar: { ...detalle.terminar, m2_segunda: e.target.value } })} /></Campo>
                 <Campo etiqueta="m² de merma" ancho={140}><input type="number" step="0.01" value={detalle.terminar.m2_merma} onChange={(e) => setDetalle({ ...detalle, terminar: { ...detalle.terminar, m2_merma: e.target.value } })} /></Campo>
-                {o.fecha_disponible > hoyIso() && gerencia && <Campo etiqueta="Motivo para liberar antes"><input value={detalle.terminar.motivo_anticipado} onChange={(e) => setDetalle({ ...detalle, terminar: { ...detalle.terminar, motivo_anticipado: e.target.value } })} /></Campo>}
-                <button className="boton-sm" disabled={!detalle.terminar.m2_bueno && !detalle.terminar.m2_segunda} onClick={async () => { const r = await accion(() => api.post(`/fabricacion/ordenes/${o.id}/terminar`, session, detalle.terminar), (x) => `Lote terminado: merma ${x.merma_pct}%, costo ${L(x.costo_m2)}/m². ${x.sin_control_calidad ? 'Ojo: sin control de calidad registrado. ' : ''}Ya está en inventario.`); if (r) await abrirDetalle(o.id); }}>Terminar y pasar a inventario</button>
+                <button className="boton-sm" disabled={!Number(detalle.terminar.m2_bueno) && !Number(detalle.terminar.m2_segunda)} onClick={async () => { const r = await accion(() => api.post(`/fabricacion/ordenes/${o.id}/terminar`, session, detalle.terminar), (x) => `Lista para vender: merma ${x.merma_pct}%, costo ${L(x.costo_m2)}/m². ${x.sin_control_calidad ? 'Ojo: sin control de calidad registrado. ' : ''}Ya está en inventario.`); if (r) await abrirDetalle(o.id); }}>Terminar y pasar a inventario</button>
               </div>
-              {o.fecha_disponible > hoyIso() && <small style={{ color: 'var(--aviso)' }}>El curado termina el {fechaCorta(o.fecha_disponible)}.</small>}
+              {o.fecha_disponible > hoyIso() && <small style={{ color: 'var(--text-dim)' }}>Pasa sola a lista para vender el {fechaCorta(o.fecha_disponible)}; si lo haces ahora, se adelanta.</small>}
             </div>
           )}
 

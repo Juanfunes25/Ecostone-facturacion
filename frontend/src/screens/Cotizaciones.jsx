@@ -162,7 +162,7 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
         <div className="panel">
           <h2>Producción y existencias de este pedido</h2>
           {c.reservas.map((r, i) => <p key={i} style={{ margin: '4px 0' }}>📦 Reservado: {num(r.m2, 2)} m² de {r.producto} (lote {r.lote})</p>)}
-          {c.ordenes.map((o) => <p key={o.id} style={{ margin: '4px 0' }}>🏭 {o.lote}: {num(o.m2_planificado, 2)} m² de {o.productos?.nombre} — <Etiqueta tono={o.estado === 'terminada' ? 'ok' : o.estado === 'curando' ? 'aviso' : 'info'}>{o.estado}</Etiqueta> {o.estado === 'planificada' ? `colada ${fechaCorta(o.fecha_programada)}` : o.fecha_disponible ? `disponible ${fechaCorta(o.fecha_disponible)}` : ''}</p>)}
+          {c.ordenes.map((o) => <p key={o.id} style={{ margin: '4px 0' }}>🏭 {o.lote}: {num(o.m2_planificado, 2)} m² de {o.productos?.nombre} — <Etiqueta tono={o.estado === 'terminada' ? 'ok' : o.estado === 'curando' ? 'aviso' : 'info'}>{{ planificada: 'por iniciar', curando: 'en secado', terminada: 'lista para vender' }[o.estado] ?? o.estado}</Etiqueta> {o.estado === 'planificada' ? `colada ${fechaCorta(o.fecha_programada)}` : o.estado === 'curando' && o.fecha_disponible ? `lista para vender el ${fechaCorta(o.fecha_disponible)}` : ''}</p>)}
         </div>
       )}
 
