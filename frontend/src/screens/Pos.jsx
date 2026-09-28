@@ -140,7 +140,7 @@ function ModalPago({ total, requiereRtn, onCancelar, onConfirmar, guardando }) {
 
   const totalPagado = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
   const cambio = Math.max(0, totalPagado - total);
-  const puedeConfirmar = !requiereRtn && totalPagado >= total - 0.005;
+  const puedeConfirmar = totalPagado >= total - 0.005;
 
   function actualizarPago(i, cambios) {
     setPagos((actual) => actual.map((p, idx) => (idx === i ? { ...p, ...cambios } : p)));
@@ -174,8 +174,8 @@ function ModalPago({ total, requiereRtn, onCancelar, onConfirmar, guardando }) {
         </div>
         {requiereRtn && (
           <div className="alerta">
-            Esta venta supera L{UMBRAL_RTN_OBLIGATORIO.toLocaleString('es-HN')} — se necesita el RTN del cliente
-            antes de cobrar.
+            Recordatorio: esta venta supera L{UMBRAL_RTN_OBLIGATORIO.toLocaleString('es-HN')} y el cliente no tiene RTN.
+            Pídelo si puedes; puedes cobrar igual (queda una alerta para el administrador).
           </div>
         )}
 
@@ -423,7 +423,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
   );
   const sinPuntoEmision = estadoPuntoEmision?.error;
   const cobroBloqueado =
-    carrito.length === 0 || carritoTieneLineasInvalidas || sinPuntoEmision || requiereRtn || guardandoPago || faltaCarne;
+    carrito.length === 0 || carritoTieneLineasInvalidas || sinPuntoEmision || guardandoPago || faltaCarne;
 
   // Auto-guarda la orden como "abierta" cada vez que cambia — así "Órdenes
   // Abiertas" siempre puede recuperarla. Si falla por red, reintenta una vez.
@@ -754,6 +754,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
             </p>
             <p style={{ marginTop: -6 }}>Cliente: {resultadoFactura.cliente_nombre || CONSUMIDOR_FINAL_NOMBRE}</p>
             <p>Cambio: {fmtL(resultadoFactura.cambio ?? 0)}</p>
+            {resultadoFactura.aviso_rtn && <div className="alerta">{resultadoFactura.aviso_rtn}</div>}
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="boton-secundario boton-sm" style={{ flex: 1 }} onClick={() => imprimir(resultadoFactura.id, { reimpresion: true })}>
                 🖨 Reimprimir ticket
@@ -991,7 +992,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
         </div>
         {requiereRtn && (
           <p style={{ color: 'var(--aviso)', fontSize: '0.82em' }}>
-            Se necesita RTN del cliente para cobrar (venta mayor a L{UMBRAL_RTN_OBLIGATORIO.toLocaleString('es-HN')}).
+            Recordatorio: venta mayor a L{UMBRAL_RTN_OBLIGATORIO.toLocaleString('es-HN')} sin RTN del cliente (no bloquea el cobro).
           </p>
         )}
 

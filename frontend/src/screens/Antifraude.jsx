@@ -36,6 +36,7 @@ const ETIQUETA_TIPO = {
   'venta.doble_factura': 'Posible doble factura',
   'venta.reimpresion_repetida': 'Reimpresiones repetidas',
   'orden.estacionada': 'Orden estacionada',
+  'venta.sin_rtn': 'Factura sin RTN (monto alto)',
   'tercera_edad.carne_repetido': 'Carné repetido',
   'tercera_edad.exceso': 'Exceso de 3ª edad',
   'acceso.denegado': 'Acceso sin permiso',
@@ -413,7 +414,6 @@ const CAMPOS_REGLAS = [
   { grupo: 'Órdenes e impresión', campos: [
     ['exigir_motivo_descarte', 'Pedir motivo para descartar una orden', 'bool'],
     ['monto_alerta_descarte', 'Monto (L) de orden descartada que genera alerta'],
-    ['minutos_orden_estacionada', 'Minutos de una orden abierta sin cobrar antes de alertar'],
     ['minutos_doble_factura', 'Ventana (min) para detectar doble factura'],
     ['exigir_motivo_reimpresion', 'Pedir motivo para reimprimir una factura', 'bool'],
     ['leyenda_factura_gratis', 'Imprimir "Si no recibe su factura, su compra es GRATIS" en el ticket', 'bool'],
@@ -497,19 +497,24 @@ export default function Antifraude({ session, sucursales }) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [correo, setCorreo] = useState(null);
+  const [conteo, setConteo] = useState({ pendientes: 0, ordenes_abiertas: 0 });
+  const [aviso, setAviso] = useState('');
 
   useEffect(() => {
     api.get('/antifraude/correo', session).then(setCorreo).catch(() => {});
     api.get('/antifraude/tendencia', session).then(setTendencia).catch(() => {});
   }, [session]);
 
+  const cargarConteo = useCallback(() => api.get('/antifraude/alertas/pendientes', session).then(setConteo).catch(() => {}), [session]);
+
   const cargarAlertas = useCallback(async () => {
+    cargarConteo();
     const params = new URLSearchParams();
     if (filtroEstado === 'abiertas') params.set('solo_pendientes', '1');
     else if (filtroEstado !== 'todas') params.set('estado', filtroEstado);
     if (filtros.sucursal_id) params.set('sucursal_id', filtros.sucursal_id);
     setAlertas(await api.get(`/antifraude/alertas?${params.toString()}`, session));
-  }, [session, filtroEstado, filtros.sucursal_id]);
+  }, [session, filtroEstado, filtros.sucursal_id, cargarConteo]);
 
   const cargarIndicadores = useCallback(async () => {
     setCargando(true);
@@ -535,6 +540,18 @@ export default function Antifraude({ session, sucursales }) {
   }, []);
 
   useCambiosEnVivo(['ventas', 'cierres_caja'], () => cargarAlertas().catch(() => {}), { retrasoMs: 2500 });
+
+  async function resolverEnBloque(tipo, etiqueta, cantidad) {
+    if (!window.confirm(`¿Cerrar ${cantidad} alerta(s) ${etiqueta}? Quedan como "resueltas" con la nota "cerradas en bloque".`)) return;
+    try {
+      const r = await api.post('/antifraude/alertas/resolver-masivo', session, tipo ? { tipo } : {});
+      setAviso(`${r.resueltas} alerta(s) cerradas.`);
+      setTimeout(() => setAviso(''), 5000);
+      cargarAlertas();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
 
   async function cambiarEstado(a, estado) {
     let nota = '';
@@ -617,6 +634,21 @@ export default function Antifraude({ session, sucursales }) {
               <option value="todas">Todas</option>
             </select>
           </div>
+          {aviso && <div className="aviso-ok">{aviso}</div>}
+          {(conteo.ordenes_abiertas > 0 || conteo.pendientes > 0) && (
+            <div className="toolbar" style={{ flexWrap: 'wrap' }}>
+              {conteo.ordenes_abiertas > 0 && (
+                <button className="boton-sm" onClick={() => resolverEnBloque('orden.estacionada', 'de órdenes abiertas', conteo.ordenes_abiertas)}>
+                  Quitar todas las alertas de órdenes abiertas ({conteo.ordenes_abiertas})
+                </button>
+              )}
+              {conteo.pendientes > 0 && (
+                <button className="boton-sm boton-secundario" onClick={() => resolverEnBloque(null, 'abiertas (de todo tipo)', conteo.pendientes)}>
+                  Cerrar todas las abiertas ({conteo.pendientes})
+                </button>
+              )}
+            </div>
+          )}
           {alertas.length === 0 && <p className="rep-vacio">Sin alertas en esta vista. 👌</p>}
           {alertas.map((a) => (
             <Alerta key={a.id} a={a} onEstado={cambiarEstado} />

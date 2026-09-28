@@ -68,7 +68,8 @@ const ABIERTAS = ['pendiente', 'investigando'];
 antifraude.get('/alertas/pendientes', requireRole('admin'), async (req, res) => {
   const { count, error } = await db.from('alertas').select('id', { count: 'exact', head: true }).in('estado', ABIERTAS);
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ pendientes: count ?? 0 });
+  const { count: ordenes } = await db.from('alertas').select('id', { count: 'exact', head: true }).in('estado', ABIERTAS).eq('tipo', 'orden.estacionada');
+  res.json({ pendientes: count ?? 0, ordenes_abiertas: ordenes ?? 0 });
 });
 
 // Para las notificaciones en vivo: alertas nuevas desde el último id visto.
@@ -123,6 +124,18 @@ async function cambiarEstadoAlerta(req, res, estado) {
   });
   res.json(data);
 }
+
+// Cierra de un solo golpe todas las alertas abiertas (opcionalmente de un solo tipo).
+antifraude.post('/alertas/resolver-masivo', requireRole('admin'), async (req, res) => {
+  const tipo = req.body?.tipo ? String(req.body.tipo).slice(0, 60) : null;
+  const nota = String(req.body?.nota ?? 'Cerradas en bloque por el administrador').trim().slice(0, 300);
+  let q = db.from('alertas').update({ estado: 'resuelta', revisada: true, revisada_por: req.perfil.id, revisada_at: new Date().toISOString(), nota_revision: nota }).in('estado', ABIERTAS);
+  if (tipo) q = q.eq('tipo', tipo);
+  const { data, error } = await q.select('id');
+  if (error) return res.status(500).json({ error: error.message });
+  await registrarAuditoria(req, { accion: 'alerta.resolver_masivo', entidad: 'alerta', detalle: { tipo: tipo ?? 'todas', cantidad: data.length, nota } });
+  res.json({ resueltas: data.length });
+});
 
 antifraude.put('/alertas/:id/revisar', requireRole('admin'), (req, res) => cambiarEstadoAlerta(req, res, 'resuelta'));
 antifraude.put('/alertas/:id/estado', requireRole('admin'), (req, res) => cambiarEstadoAlerta(req, res, req.body?.estado));

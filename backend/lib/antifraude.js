@@ -134,34 +134,6 @@ export async function registrarLoginFallido(req, acceso) {
 }
 
 // ── Revisión periódica (cada 10 min mientras el servidor está activo) ──
-// Órdenes estacionadas: una orden abierta mucho tiempo puede estarse
-// usando como "cuenta" para cobrar en efectivo y luego descartarla.
-async function revisarOrdenesEstacionadas() {
-  const reglas = await obtenerReglas();
-  const limite = new Date(Date.now() - reglas.minutos_orden_estacionada * 60 * 1000).toISOString();
-  const { data: ordenes } = await db
-    .from('ventas')
-    .select('id, numero_orden, total, created_at, sucursal_id, perfiles(nombre)')
-    .eq('estado', 'abierta')
-    .lt('created_at', limite)
-    .gt('total', 0)
-    .limit(50);
-  for (const o of ordenes ?? []) {
-    const { count } = await db.from('alertas').select('id', { count: 'exact', head: true }).eq('tipo', 'orden.estacionada').eq('entidad_id', o.id);
-    if (count) continue;
-    const minutos = Math.round((Date.now() - new Date(o.created_at).getTime()) / 60000);
-    await crearAlerta(null, {
-      tipo: 'orden.estacionada',
-      severidad: 'media',
-      titulo: `Orden #${o.numero_orden} abierta hace ${minutos} min sin cobrar (L ${Number(o.total).toFixed(2)})`,
-      sucursalId: o.sucursal_id,
-      entidad: 'venta',
-      entidadId: o.id,
-      detalle: { orden: o.numero_orden, total: Number(o.total), cajero: o.perfiles?.nombre ?? '', minutos_abierta: minutos },
-    });
-  }
-}
-
 // La bitácora es inalterable por diseño; si alguien con acceso directo a la
 // base la manipulara, la cadena de hashes se rompe y esto lo detecta.
 let ultimaVerificacion = 0;
@@ -183,7 +155,6 @@ async function verificarIntegridadBitacora() {
 
 export function iniciarVigilancia() {
   const ciclo = () => {
-    revisarOrdenesEstacionadas().catch((e) => console.error('[vigilancia] ordenes', e.message));
     verificarIntegridadBitacora().catch((e) => console.error('[vigilancia] bitacora', e.message));
   };
   setTimeout(ciclo, 30 * 1000);

@@ -17,8 +17,8 @@ import { filtrarRango } from '../lib/fechas.js';
 
 export const ventas = Router();
 
-// Monto a partir del cual se exige RTN del cliente (mismo criterio que el
-// "limiteRTN" que ya usaba WizPOS para esta empresa: L10,000).
+// Monto a partir del cual se RECUERDA pedir el RTN del cliente. No bloquea la
+// factura: solo deja un aviso a quien factura y una alerta para el administrador.
 export const UMBRAL_RTN_OBLIGATORIO = 10000;
 
 // Sucursal fija de un cajero (null para admin/manager o cajero "flotante").
@@ -448,13 +448,6 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
     if (!idsFormas.has(p.forma_pago_id)) throw Object.assign(new Error('Forma de pago inválida'), { status: 400 });
   }
 
-  if (Number(venta.total) > UMBRAL_RTN_OBLIGATORIO && !venta.clientes?.rtn) {
-    throw Object.assign(
-      new Error(`Se requiere el RTN del cliente para ventas mayores a L${UMBRAL_RTN_OBLIGATORIO.toLocaleString('es-HN')}`),
-      { status: 400 }
-    );
-  }
-
   const reglas = await obtenerReglas();
   if (reglas.exigir_carne_tercera_edad) {
     const { data: lineas25 } = await db.from('detalle_venta').select('id').eq('venta_id', venta.id).eq('descuento_porcentaje', 25).limit(1);
@@ -516,6 +509,20 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
     },
   });
 
+  // Recordatorio (no bloquea): venta grande sin RTN del cliente.
+  const sinRtnAlto = Number(venta.total) > UMBRAL_RTN_OBLIGATORIO && !venta.clientes?.rtn;
+  if (sinRtnAlto) {
+    crearAlerta(req, {
+      tipo: 'venta.sin_rtn',
+      severidad: 'baja',
+      titulo: `Factura ${ventaFinal.numero_factura} de L ${Number(venta.total).toLocaleString('es-HN', { minimumFractionDigits: 2 })} emitida sin RTN del cliente (${req.perfil?.nombre ?? ''})`,
+      sucursalId: venta.sucursal_id,
+      entidad: 'venta',
+      entidadId: venta.id,
+      detalle: { factura: ventaFinal.numero_factura, total: Number(venta.total), cliente: venta.clientes?.nombre ?? 'Consumidor Final', por: req.perfil?.nombre },
+    }).catch(() => {});
+  }
+
   // Detecciones antifraude posteriores al cobro (no frenan la venta).
   revisarDobleFactura(req, { ...ventaFinal, sucursal_id: venta.sucursal_id }).catch((e) => console.error('[antifraude] doble', e.message));
   if (venta.tercera_edad_identidad) {
@@ -549,6 +556,7 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
     ...ventaFinal,
     cliente_nombre: venta.clientes?.nombre ?? 'Consumidor Final',
     es_borrador: puntoEmision?.es_borrador ?? true,
+    aviso_rtn: sinRtnAlto ? `Recordatorio: esta factura pasa de L ${UMBRAL_RTN_OBLIGATORIO.toLocaleString('es-HN')} y el cliente no tiene RTN. Trata de pedirlo y agregarlo al cliente.` : null,
   };
 }
 

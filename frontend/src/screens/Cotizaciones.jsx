@@ -185,7 +185,7 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
             </div>
           )}
           {c.estado === 'aprobada' && cobra && c.pendiente <= 0.004 && c.pagos.length > 0 && (
-            <button className="boton" disabled={ocupado} onClick={async () => { const r = await hacer(() => api.post(`/cotizaciones/${c.id}/facturar`, session, {}), (x) => `Factura ${x.factura.numero_factura} emitida`); if (r) { try { await imprimirTicket(r.factura.id, session); } catch { /* la impresión no bloquea */ } } }}>🧾 Emitir factura</button>
+            <button className="boton" disabled={ocupado} onClick={async () => { const r = await hacer(() => api.post(`/cotizaciones/${c.id}/facturar`, session, {}), (x) => `Factura ${x.factura.numero_factura} emitida.${x.factura.aviso_rtn ? ` ⚠ ${x.factura.aviso_rtn}` : ''}`); if (r) { try { await imprimirTicket(r.factura.id, session); } catch { /* la impresión no bloquea */ } } }}>🧾 Emitir factura</button>
           )}
           {c.estado === 'facturada' && c.venta && (
             <div className="toolbar">
