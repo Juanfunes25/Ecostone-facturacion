@@ -41,7 +41,7 @@ export default function Cotizaciones({ session, perfil }) {
         <h2>Cotizaciones y pedidos</h2>
         <p style={{ color: 'var(--text-dim)', marginTop: 0 }}>Primero se cotiza; al aprobarla se reserva la piedra (o se ordena producir lo que falte); al cobrarla se factura.</p>
         <div className="toolbar">
-          <input placeholder="Buscar cliente o proyecto…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+          <input placeholder="Buscar cliente…" value={busca} onChange={(e) => setBusca(e.target.value)} />
           <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>{ESTADOS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select>
           {vende && <button className="boton-sm" onClick={() => setVista({ tipo: 'editor', inicial: null })}>+ Nueva cotización</button>}
         </div>
@@ -51,7 +51,7 @@ export default function Cotizaciones({ session, perfil }) {
             {lista.map((c) => (
               <tr key={c.id}>
                 <td>{c.numero}</td>
-                <td><strong>{c.nombre_cliente}</strong><small style={{ display: 'block', color: 'var(--text-dim)' }}>{c.proyecto}</small></td>
+                <td><strong>{c.nombre_cliente}</strong>{c.proyecto && <small style={{ display: 'block', color: 'var(--text-dim)' }}>{c.proyecto}</small>}</td>
                 <td><Etiqueta tono={TONO[c.vencida ? 'vencida' : c.estado]}>{c.vencida ? 'vencida' : c.estado}</Etiqueta>{c.venta?.numero_factura && <small style={{ display: 'block' }}>{c.venta.numero_factura}</small>}</td>
                 <td style={{ textAlign: 'right' }}>{L(c.total)}</td>
                 <td style={{ textAlign: 'right' }}>{c.pagado > 0 ? L(c.pagado) : '—'}</td>
@@ -115,7 +115,7 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
           <button className="boton-sm boton-secundario" onClick={onVolver}>← Volver</button>
         </div>
         <p style={{ margin: '6px 0' }}><strong>{c.nombre_cliente}</strong>{c.rtn_cliente && ` · RTN ${c.rtn_cliente}`}{c.telefono && ` · ${c.telefono}`}{c.email && ` · ${c.email}`}</p>
-        <p style={{ margin: '0 0 6px' }}><strong>{c.proyecto}</strong>{c.direccion_obra && ` — ${c.direccion_obra}`} · Lista {c.listas_precio?.nombre} ({c.isv_incluido ? 'ISV incluido' : '+ ISV'}) · {c.entrega === 'retira' ? 'Retira en planta' : 'Despacho'}{c.fecha_entrega && ` · entrega ${fechaCorta(c.fecha_entrega)}`} · vigencia {fechaCorta(c.fecha_vigencia)}</p>
+        <p style={{ margin: '0 0 6px' }}>{c.proyecto && <><strong>{c.proyecto}</strong>{c.direccion_obra && ` — ${c.direccion_obra}`} · </>}Lista {c.listas_precio?.nombre} ({c.isv_incluido ? 'ISV incluido' : '+ ISV'}){c.fecha_entrega && ` · entrega ${fechaCorta(c.fecha_entrega)}`} · vigencia {fechaCorta(c.fecha_vigencia)}</p>
         <div className="toolbar" style={{ flexWrap: 'wrap' }}>
           <button className="boton-sm boton-secundario" onClick={() => verPdf(`/cotizaciones/${c.id}/pdf`, session).catch((e) => setError(e.message))}>Ver PDF</button>
           {abierta && vende && <button className="boton-sm boton-secundario" onClick={() => onEditar(c)}>Editar</button>}
@@ -139,19 +139,19 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
 
       <div className="panel">
         <table className="tabla">
-          <thead><tr><th>Concepto</th><th style={{ textAlign: 'right' }}>Cantidad</th><th style={{ textAlign: 'right' }}>Precio</th><th style={{ textAlign: 'right' }}>Desc.</th><th style={{ textAlign: 'right' }}>Importe</th></tr></thead>
+          <thead><tr><th>Concepto</th><th style={{ textAlign: 'right' }}>Cantidad</th><th style={{ textAlign: 'right' }}>Precio</th><th style={{ textAlign: 'right' }}>Importe</th></tr></thead>
           <tbody>
             {c.lineas.map((l) => (
               <tr key={l.id}>
-                <td>{l.descripcion}{l.m2_neto != null && <small style={{ display: 'block', color: 'var(--text-dim)' }}>{num(l.m2_neto, 2)} m² netos + {num(l.desperdicio_pct, 1)}% desperdicio{l.cajas != null ? ` → ${num(l.cajas, 0)} cajas` : ''}</small>}</td>
+                <td>{l.descripcion}{l.m2_neto != null && l.cajas != null && <small style={{ display: 'block', color: 'var(--text-dim)' }}>{num(l.m2_neto, 2)} m² → {num(l.cajas, 0)} cajas completas</small>}</td>
                 <td style={{ textAlign: 'right' }}>{num(l.cantidad, 3)} {l.unidad}</td><td style={{ textAlign: 'right' }}>{L(l.precio_unitario)}</td>
-                <td style={{ textAlign: 'right' }}>{Number(l.descuento_pct) ? `${num(l.descuento_pct, 1)}%` : '—'}</td><td style={{ textAlign: 'right' }}>{L(l.monto)}</td>
+                <td style={{ textAlign: 'right' }}>{L(l.monto)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <div style={{ textAlign: 'right', marginTop: 8 }}>
-          {Number(c.descuento) > 0 && <div>Descuento global −{L(c.descuento)}</div>}
+          {Number(c.descuento) > 0 && <div>Descuento {Number(c.descuento_pct) > 0 ? `${num(c.descuento_pct, 2)}%` : ''}: −{L(c.descuento)}</div>}
           <div>Subtotal {L(c.subtotal)} · ISV {L(c.isv)}</div>
           <div style={{ fontSize: '1.4em' }}><strong>Total {L(c.total)}</strong></div>
           {gerencia && c.margen_pct != null && <div style={{ color: 'var(--text-dim)' }}>Costo {L(c.costo)} · margen {num(c.margen_pct, 1)}%</div>}

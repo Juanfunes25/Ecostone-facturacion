@@ -208,7 +208,7 @@ export default function Fabricacion({ session, perfil }) {
             <span>{num(o.m2_planificado, 2)} m² planificados</span>
             <span>Programada: {fechaCorta(o.fecha_programada)}</span>
             {o.fecha_disponible && <span>Disponible: {fechaCorta(o.fecha_disponible)}</span>}
-            {o.cotizaciones && <span>Cot. #{o.cotizaciones.numero} · {o.cotizaciones.proyecto}</span>}
+            {o.cotizaciones && <span>Cot. #{o.cotizaciones.numero}{o.cotizaciones.proyecto ? ` · ${o.cotizaciones.proyecto}` : ''}</span>}
             {o.coladas && <span>{o.coladas} coladas (molde {o.moldes?.codigo})</span>}
           </div>
           <h3 style={{ margin: '12px 0 6px' }}>Insumos: receta vs. realidad</h3>

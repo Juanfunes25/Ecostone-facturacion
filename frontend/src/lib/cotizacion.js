@@ -61,7 +61,8 @@ export function pesoEstimadoKg(lineas, productosPorId) {
 }
 
 // lineas: [{cantidad, precio_unitario, descuento_pct, isv_tasa, costo_unitario?}]
-export function calcularCotizacion(lineas, { isv_incluido = false, descuento = 0, cliente_exento = false } = {}) {
+// descuento_pct (opcional, negociado) tiene prioridad sobre descuento (monto en L).
+export function calcularCotizacion(lineas, { isv_incluido = false, descuento = 0, descuento_pct = 0, cliente_exento = false } = {}) {
   const base = lineas.map((l) => {
     const cantidad = Number(l.cantidad) || 0;
     const precio = Number(l.precio_unitario) || 0;
@@ -70,7 +71,8 @@ export function calcularCotizacion(lineas, { isv_incluido = false, descuento = 0
     return { l, cantidad, precio, bruto, dLinea, n1: round2(bruto - dLinea), tasa: cliente_exento ? 0 : Number(l.isv_tasa ?? 0.15) };
   });
   const sumaN1 = round2(base.reduce((s, x) => s + x.n1, 0));
-  const D = Math.min(sumaN1, Math.max(0, round2(descuento)));
+  const pct = Math.min(100, Math.max(0, Number(descuento_pct) || 0));
+  const D = Math.min(sumaN1, Math.max(0, pct > 0 ? round2((sumaN1 * pct) / 100) : round2(descuento)));
   let asignado = 0;
   const out = base.map((x, i) => {
     const ultima = i === base.length - 1;
@@ -113,6 +115,7 @@ export function calcularCotizacion(lineas, { isv_incluido = false, descuento = 0
     isv: suma('isv'),
     total,
     descuento_total: round2(base.reduce((s, x) => s + x.dLinea, 0) + D),
+    descuento_global: D,
     descuento_pct: brutoTotal > 0 ? round2(((base.reduce((s, x) => s + x.dLinea, 0) + D) / brutoTotal) * 100) : 0,
     costo,
     margen: round2(suma('base') - costo),

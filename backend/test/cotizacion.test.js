@@ -50,6 +50,20 @@ test('descuento global reduce base e ISV proporcionalmente', () => {
   assert.equal(r.descuento_total, 120);
 });
 
+test('descuento negociado en % sobre el total', () => {
+  const r = be.calcularCotizacion([{ cantidad: 10, precio_unitario: 100, descuento_pct: 0, isv_tasa: 0.15 }], { isv_incluido: false, descuento_pct: 10 });
+  assert.equal(r.descuento_global, 100);
+  assert.equal(r.subtotal, 900);
+  assert.equal(r.total, 1035);
+  assert.equal(r.descuento_pct, 10);
+});
+
+test('sin descuento no cambia nada', () => {
+  const a = be.calcularCotizacion([{ cantidad: 3, precio_unitario: 33.33, isv_tasa: 0.15 }], { isv_incluido: true });
+  const b = be.calcularCotizacion([{ cantidad: 3, precio_unitario: 33.33, isv_tasa: 0.15 }], { isv_incluido: true, descuento_pct: 0 });
+  assert.deepEqual(a, b);
+});
+
 test('cliente exento no paga ISV', () => {
   const r = be.calcularCotizacion([{ cantidad: 2, precio_unitario: 50, isv_tasa: 0.15 }], { cliente_exento: true });
   assert.equal(r.isv, 0);
@@ -73,7 +87,7 @@ test('frontend y backend dan lo mismo (5 000 casos aleatorios)', () => {
       isv_tasa: Math.random() < 0.9 ? 0.15 : 0,
       costo_unitario: Math.random() * 50,
     }));
-    const op = { isv_incluido: Math.random() < 0.5, descuento: Math.random() < 0.5 ? Math.round(Math.random() * 30000) / 100 : 0, cliente_exento: Math.random() < 0.1 };
+    const op = { isv_incluido: Math.random() < 0.5, descuento: Math.random() < 0.5 ? Math.round(Math.random() * 30000) / 100 : 0, descuento_pct: Math.random() < 0.5 ? [0, 5, 10, 12.5][Math.floor(Math.random() * 4)] : 0, cliente_exento: Math.random() < 0.1 };
     const a = JSON.stringify(be.calcularCotizacion(lineas, op));
     const b = JSON.stringify(fe.calcularCotizacion(lineas, op));
     if (a !== b) diferencias++;

@@ -119,7 +119,8 @@ async function guardar(req, res, id = null) {
     const isv_incluido = lista?.isv_incluido ?? true;
 
     const { lineas, bajoLista, tope } = await armarLineas(b.lineas, { lista, cliente, perfil: req.perfil, params });
-    const calc = calcularCotizacion(lineas, { isv_incluido, descuento: numero(b.descuento), cliente_exento: !!cliente.exento_impuestos });
+    const descPct = Math.min(100, Math.max(0, numero(b.descuento_pct)));
+    const calc = calcularCotizacion(lineas, { isv_incluido, descuento_pct: descPct, cliente_exento: !!cliente.exento_impuestos });
     if (req.perfil.rol === 'vendedor' && calc.descuento_pct > tope) throw err(`El descuento total (${calc.descuento_pct}%) supera tu tope de ${tope}%. Pide autorización a un gerente.`, 403);
 
     const vigencia = numero(b.vigencia_dias, numero(params.vigencia_cotizacion_dias, 15));
@@ -128,12 +129,11 @@ async function guardar(req, res, id = null) {
       cliente_id: cliente.id, nombre_cliente: cliente.nombre, rtn_cliente: cliente.rtn ?? null, telefono: b.telefono || cliente.telefono || null, email: b.email || cliente.email || null,
       proyecto: String(b.proyecto ?? '').trim(), direccion_obra: b.direccion_obra || null,
       lista_precio_id: lista?.id ?? null, isv_incluido, vigencia_dias: vigencia, fecha_vigencia: sumarDias(hoyHn(), vigencia),
-      descuento: numero(b.descuento), subtotal: calc.subtotal, isv: calc.isv, total: calc.total,
+      descuento: calc.descuento_global, descuento_pct: descPct, subtotal: calc.subtotal, isv: calc.isv, total: calc.total,
       anticipo_pct: numero(b.anticipo_pct, numero(params.anticipo_pct_default, 0)),
-      entrega: b.entrega === 'retira' ? 'retira' : 'despacho', fecha_entrega: b.fecha_entrega || null,
+      entrega: b.entrega === 'despacho' ? 'despacho' : 'retira', fecha_entrega: b.fecha_entrega || null,
       notas: b.notas || null, sucursal_id: planta?.id ?? null, updated_at: new Date().toISOString(),
     };
-    if (!fila.proyecto) throw err('Indica el nombre del proyecto u obra');
     if (fila.anticipo_pct < 0 || fila.anticipo_pct > 100) throw err('El anticipo debe estar entre 0 y 100%');
 
     let cot;
@@ -309,7 +309,7 @@ cotizaciones.post('/:id/facturar', requireRole(...COBRA), async (req, res) => {
     if (!cot.pagos.length) throw err('Registra el pago antes de facturar', 409);
 
     const cliente = cot.clientes ?? {};
-    const calc = calcularCotizacion(cot.lineas, { isv_incluido: cot.isv_incluido, descuento: Number(cot.descuento || 0), cliente_exento: !!cliente.exento_impuestos });
+    const calc = calcularCotizacion(cot.lineas, { isv_incluido: cot.isv_incluido, descuento: Number(cot.descuento || 0), descuento_pct: Number(cot.descuento_pct || 0), cliente_exento: !!cliente.exento_impuestos });
     if (calc.total !== Number(cot.total)) throw err('Los precios cambiaron desde que se cotizó; guarda la cotización de nuevo antes de facturar', 409);
     const punto = await obtenerPuntoEmisionActivo(cot.sucursal_id);
 
@@ -323,7 +323,7 @@ cotizaciones.post('/:id/facturar', requireRole(...COBRA), async (req, res) => {
       sucursal_id: cot.sucursal_id, punto_emision_id: punto.id, cliente_id: cot.cliente_id, cajero_id: req.perfil.id, estado: 'abierta', cotizacion_id: cot.id,
       subtotal_exento: round2(exento), subtotal_exonerado: round2(exonerado), subtotal_gravado_15: round2(gravado),
       descuento: round2(calc.lineas.reduce((s, l) => s + l.descuento_con_isv, 0)), descuento_porcentaje: 0, isv_total: calc.isv, total: calc.total,
-      nota_interna: `Cotización #${cot.numero} · ${cot.proyecto}`,
+      nota_interna: `Cotización #${cot.numero}${cot.proyecto ? ` · ${cot.proyecto}` : ''}`,
     }).select().single();
     if (error) throw err(error.message);
     ventaId = venta.id;

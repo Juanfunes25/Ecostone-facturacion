@@ -329,7 +329,7 @@ fabricacion.get('/agenda', requireRole(...LEE, 'vendedor'), async (req, res) => 
     if (o.estado === 'planificada' && o.fecha_programada) eventos.push({ fecha: o.fecha_programada, tipo: 'colada', titulo: `Colar ${o.lote} · ${o.productos?.nombre}`, detalle: `${o.m2_planificado} m²${o.cotizaciones ? ` · Cot. #${o.cotizaciones.numero}` : ''}`, atrasado: o.fecha_programada < hoy, orden_id: o.id });
     if (o.estado === 'curando' && o.fecha_disponible) eventos.push({ fecha: o.fecha_disponible, tipo: 'curado', titulo: `Fin de curado ${o.lote} · ${o.productos?.nombre}`, detalle: `${o.m2_planificado} m²`, atrasado: o.fecha_disponible < hoy, orden_id: o.id });
   }
-  for (const c of cots ?? []) eventos.push({ fecha: c.fecha_entrega, tipo: 'entrega', titulo: `Entrega Cot. #${c.numero} · ${c.proyecto}`, detalle: c.nombre_cliente, atrasado: c.fecha_entrega < hoy && c.estado === 'aprobada', cotizacion_id: c.id });
+  for (const c of cots ?? []) eventos.push({ fecha: c.fecha_entrega, tipo: 'entrega', titulo: `Entrega Cot. #${c.numero} · ${c.proyecto || c.nombre_cliente}`, detalle: c.proyecto ? c.nombre_cliente : '', atrasado: c.fecha_entrega < hoy && c.estado === 'aprobada', cotizacion_id: c.id });
   res.json(eventos.filter((e) => e.fecha >= desde && e.fecha <= hasta).sort((a, b) => a.fecha.localeCompare(b.fecha)));
 });
 

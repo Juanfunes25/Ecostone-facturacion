@@ -24,7 +24,7 @@ export function generarPdfCotizacionBuffer(cot, lineas, cliente = null) {
     salida.on('error', reject);
     doc.pipe(salida);
 
-    const calc = calcularCotizacion(lineas, { isv_incluido: cot.isv_incluido, descuento: Number(cot.descuento || 0), cliente_exento: !!cliente?.exento_impuestos });
+    const calc = calcularCotizacion(lineas, { isv_incluido: cot.isv_incluido, descuento: Number(cot.descuento || 0), descuento_pct: Number(cot.descuento_pct || 0), cliente_exento: !!cliente?.exento_impuestos });
     const ancho = doc.page.width - 88;
 
     // Encabezado
@@ -41,10 +41,12 @@ export function generarPdfCotizacionBuffer(cot, lineas, cliente = null) {
     doc.font('R').fontSize(10).text(cot.nombre_cliente, 44, y + 14);
     if (cot.rtn_cliente) doc.text(`RTN: ${cot.rtn_cliente}`);
     if (cot.telefono) doc.text(`Tel: ${cot.telefono}`);
-    doc.font('B').fontSize(10).text('PROYECTO', 320, y);
-    doc.font('R').text(cot.proyecto, 320, y + 14, { width: 248 });
-    if (cot.direccion_obra) doc.text(cot.direccion_obra, 320, doc.y, { width: 248 });
-    if (cot.fecha_entrega) doc.text(`Entrega estimada: ${fecha(cot.fecha_entrega)}`, 320, doc.y, { width: 248 });
+    if (cot.proyecto || cot.direccion_obra || cot.fecha_entrega) {
+      doc.font('B').fontSize(10).text('PROYECTO', 320, y);
+      doc.font('R').text(cot.proyecto || '—', 320, y + 14, { width: 248 });
+      if (cot.direccion_obra) doc.text(cot.direccion_obra, 320, doc.y, { width: 248 });
+      if (cot.fecha_entrega) doc.text(`Entrega estimada: ${fecha(cot.fecha_entrega)}`, 320, doc.y, { width: 248 });
+    }
     y = Math.max(doc.y, y + 62) + 14;
 
     // Tabla
@@ -61,7 +63,7 @@ export function generarPdfCotizacionBuffer(cot, lineas, cliente = null) {
     };
     y = encabezado(y);
     lineas.forEach((l, i) => {
-      const detalle = [l.descripcion, l.m2_neto ? `${num(l.m2_neto, 2)} m² netos + ${num(l.desperdicio_pct, 1)}% desperdicio${l.cajas ? ` = ${num(l.cajas, 0)} cajas` : ''}` : null].filter(Boolean);
+      const detalle = [l.descripcion, l.m2_neto && l.cajas ? `${num(l.m2_neto, 2)} m² → ${num(l.cajas, 0)} cajas completas` : null].filter(Boolean);
       const alto = 16 + (detalle.length - 1) * 11;
       if (y + alto > doc.page.height - 200) { doc.addPage(); y = encabezado(44); }
       if (i % 2 === 0) doc.rect(44, y - 3, ancho, alto + 2).fill(MARCA.crema);
@@ -83,7 +85,7 @@ export function generarPdfCotizacionBuffer(cot, lineas, cliente = null) {
       doc.font(fuerte ? 'B' : 'R').fontSize(fuerte ? 12 : 9.5).fillColor(MARCA.grafito).text(t, 330, y, { width: 110 }).text(v, 440, y, { width: 128, align: 'right' });
       y += fuerte ? 20 : 15;
     };
-    if (calc.descuento_total > 0) fila('Descuento', `- ${L(calc.descuento_total)}`);
+    if (calc.descuento_total > 0) fila(Number(cot.descuento_pct) > 0 ? `Descuento ${num(cot.descuento_pct, 2)}%` : 'Descuento', `- ${L(calc.descuento_total)}`);
     fila('Subtotal', L(calc.subtotal));
     fila('ISV 15%', L(calc.isv));
     doc.moveTo(330, y).lineTo(568, y).strokeColor(MARCA.musgo).lineWidth(1.2).stroke(); y += 5;
