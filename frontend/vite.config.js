@@ -23,11 +23,16 @@ export default defineConfig({
       },
       manifest: {
         name: 'EcoStone Facturación',
-        short_name: 'Facturación',
+        short_name: 'EcoStone',
         theme_color: '#4f6b3c',
         background_color: '#f4f1ea',
         display: 'standalone',
-        icons: [],
+        start_url: '/',
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
     }),
   ],

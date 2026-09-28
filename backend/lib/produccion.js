@@ -33,9 +33,9 @@ export async function actualizarCostoEstandar(productoId) {
 }
 
 // Crea una orden de producción con su consumo teórico según la receta activa.
-export async function crearOrdenProduccion(req, { producto_id, m2, fecha_programada, cotizacion_id = null, molde_id = null, notas = null, responsable_id = null }) {
+export async function crearOrdenProduccion(req, { producto_id, m2, fecha_programada, cotizacion_id = null, molde_id = null, notas = null, responsable_id = null, permitirSinReceta = false }) {
   const receta = await recetaActiva(producto_id);
-  if (!receta) throw Object.assign(new Error('El producto no tiene una receta activa: créala en Fabricación → Recetas'), { status: 400 });
+  if (!receta && !permitirSinReceta) throw Object.assign(new Error('El producto no tiene una receta activa: créala en Fabricación → Recetas'), { status: 400 });
   const m2Plan = round3(m2);
   if (!(m2Plan > 0)) throw Object.assign(new Error('Los m² a producir deben ser mayores que 0'), { status: 400 });
 
@@ -55,7 +55,7 @@ export async function crearOrdenProduccion(req, { producto_id, m2, fecha_program
     const lote = `${prefijo}-${String((count ?? 0) + intento).padStart(2, '0')}`;
     const { data, error } = await db
       .from('ordenes_produccion')
-      .insert({ lote, producto_id, receta_id: receta.id, cotizacion_id, m2_planificado: m2Plan, molde_id, coladas, fecha_programada: fecha_programada || sumarDias(hoy, 1), responsable_id, notas, creada_por: req.perfil?.id ?? null })
+      .insert({ lote, producto_id, receta_id: receta?.id ?? null, cotizacion_id, m2_planificado: m2Plan, molde_id, coladas, fecha_programada: fecha_programada || sumarDias(hoy, 1), responsable_id, notas, creada_por: req.perfil?.id ?? null })
       .select()
       .single();
     if (!error) orden = data;
@@ -63,8 +63,8 @@ export async function crearOrdenProduccion(req, { producto_id, m2, fecha_program
   }
   if (!orden) throw new Error('No se pudo asignar un número de lote; intenta de nuevo');
 
-  const factor = 1 + Number(receta.merma_esperada_pct || 0) / 100;
-  const consumos = (receta.receta_items ?? []).map((i) => ({
+  const factor = 1 + Number(receta?.merma_esperada_pct || 0) / 100;
+  const consumos = (receta?.receta_items ?? []).map((i) => ({
     orden_id: orden.id,
     mp_id: i.mp_id,
     teorico: round3(Number(i.cantidad_m2) * m2Plan * factor),
@@ -84,7 +84,11 @@ export function demandaPorProducto(lineas, productosPorId) {
     if (l.tipo !== 'producto' || !l.producto_id) continue;
     const p = productosPorId.get(l.producto_id);
     if (!p || p.tipo !== 'piedra') continue;
-    const m2 = l.cajas && Number(p.m2_por_caja) > 0 ? Number(l.cajas) * Number(p.m2_por_caja) : Number(l.m2_neto || 0) * (1 + Number(l.desperdicio_pct || 0) / 100);
+    // Unidad de inventario: m² (o cajas para las cajas de esquina, que no tienen m²).
+    let m2 = 0;
+    if (l.cajas && Number(p.m2_por_caja) > 0) m2 = Number(l.cajas) * Number(p.m2_por_caja);
+    else if (Number(l.m2_neto) > 0) m2 = Number(l.m2_neto) * (1 + Number(l.desperdicio_pct || 0) / 100);
+    else if (['m2', 'caja'].includes(p.unidad_venta)) m2 = Number(l.cantidad || 0);
     if (m2 > 0) mapa.set(l.producto_id, round3((mapa.get(l.producto_id) ?? 0) + m2));
   }
   return mapa;
@@ -94,7 +98,7 @@ export function demandaPorProducto(lineas, productosPorId) {
 // órdenes de producción por lo que falte. Idempotente: se puede volver a
 // llamar (por ejemplo al terminar una producción) sin duplicar reservas.
 export async function reservarCotizacion(req, cotizacion, lineas) {
-  const { data: productos } = await db.from('productos').select('id, nombre, tipo, m2_por_caja').in('id', [...new Set(lineas.map((l) => l.producto_id).filter(Boolean))]);
+  const { data: productos } = await db.from('productos').select('id, nombre, tipo, m2_por_caja, unidad_venta').in('id', [...new Set(lineas.map((l) => l.producto_id).filter(Boolean))]);
   const porId = new Map((productos ?? []).map((p) => [p.id, p]));
   const demanda = demandaPorProducto(lineas, porId);
   const resultado = { reservado: [], ordenes: [], pendientes: [] };

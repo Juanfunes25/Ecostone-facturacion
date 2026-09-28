@@ -10,6 +10,8 @@ import Fabricacion from './screens/Fabricacion.jsx';
 import Recetas from './screens/Recetas.jsx';
 import Insumos from './screens/Insumos.jsx';
 import Inventario from './screens/Inventario.jsx';
+import RegistrarProduccion from './screens/RegistrarProduccion.jsx';
+import ReporteProduccion from './screens/ReporteProduccion.jsx';
 import Clientes from './screens/Clientes.jsx';
 import Usuarios from './screens/Usuarios.jsx';
 import Cierres from './screens/Cierres.jsx';
@@ -96,10 +98,12 @@ const PANTALLAS = [
   { id: 'pos', etiqueta: 'Venta de mostrador', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Pos },
   { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Facturas },
   { id: 'cierres', etiqueta: 'Cierre de caja', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Cierres },
-  { id: 'produccion', etiqueta: 'Producción', grupo: 'Fabricación', roles: ['admin', 'gerente', 'produccion', 'bodega'], Componente: Fabricacion },
-  { id: 'recetas', etiqueta: 'Recetas y costos', grupo: 'Fabricación', roles: ['admin', 'gerente', 'produccion'], Componente: Recetas },
-  { id: 'insumos', etiqueta: 'Insumos', grupo: 'Fabricación', roles: ['admin', 'gerente', 'produccion', 'bodega'], Componente: Insumos },
-  { id: 'inventario', etiqueta: 'Inventario de piedra', grupo: 'Fabricación', roles: ['admin', 'gerente', 'produccion', 'bodega', 'vendedor'], Componente: Inventario },
+  { id: 'registrar-produccion', etiqueta: 'Registrar producción', grupo: 'Fabricación', roles: ['produccion', 'admin', 'gerente'], Componente: RegistrarProduccion },
+  { id: 'reporte-produccion', etiqueta: 'Reporte de producción', grupo: 'Fabricación', roles: ['admin', 'gerente'], Componente: ReporteProduccion },
+  { id: 'produccion', etiqueta: 'Órdenes y agenda', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], Componente: Fabricacion },
+  { id: 'recetas', etiqueta: 'Recetas y costos', grupo: 'Fabricación', roles: ['admin', 'gerente'], Componente: Recetas },
+  { id: 'insumos', etiqueta: 'Insumos', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], Componente: Insumos },
+  { id: 'inventario', etiqueta: 'Inventario de piedra', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega', 'vendedor'], Componente: Inventario },
   { id: 'dashboard', etiqueta: 'Dashboard', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Dashboard },
   { id: 'reportes', etiqueta: 'Reportes', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Reportes },
   { id: 'catalogo', etiqueta: 'Catálogo de piedra', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor'], Componente: Piedra },

@@ -24,8 +24,12 @@ import { fabricacion } from './routes/fabricacion.js';
 import { inventario } from './routes/inventario.js';
 import { cotizaciones } from './routes/cotizaciones.js';
 import { catalogoFabrica } from './routes/catalogoFabrica.js';
+import { registroProduccion } from './routes/registroProduccion.js';
+import { reporteProduccion } from './routes/reporteProduccion.js';
+import { iniciarLiberacionAutomatica } from './lib/colada.js';
 import { antifraude } from './routes/antifraude.js';
 import { requireRole } from './middleware/requireRole.js';
+import { registrarAuditoria } from './lib/auditoria.js';
 import { iniciarVigilancia, registrarLoginFallido } from './lib/antifraude.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -62,6 +66,17 @@ app.post('/api/sesion/login-fallido', async (req, res) => {
 
 app.use('/api', requireAuth);
 
+// El operario de planta (rol "produccion") solo puede usar su módulo de registro:
+// nada de ventas, costos, precios ni clientes, aunque llame a la API a mano.
+const RUTAS_OPERARIO = [/^\/api\/perfil$/, /^\/api\/sucursales$/, /^\/api\/registro-produccion(\/|$)/, /^\/api\/antifraude\/evento$/];
+app.use('/api', (req, res, next) => {
+  if (req.perfil?.rol !== 'produccion') return next();
+  const ruta = req.originalUrl.split('?')[0];
+  if (RUTAS_OPERARIO.some((r) => r.test(ruta))) return next();
+  registrarAuditoria(req, { accion: 'acceso.denegado', entidad: 'sistema', sucursalId: req.perfil.sucursal_id ?? null, detalle: { metodo: req.method, ruta, rol: 'produccion' } });
+  res.status(403).json({ error: 'No tiene permiso para esta acción' });
+});
+
 // Perfil propio: sucursal, rol y flags (cierre ciego, sin horario)
 app.get('/api/perfil', (req, res) => res.json(req.perfil));
 
@@ -87,6 +102,8 @@ app.use('/api/caja-chica', requireRole('admin', 'gerente'), cajaChica);
 app.use('/api/usuarios', usuarios);
 app.use('/api/dashboard', requireRole('admin', 'gerente'), dashboard);
 app.use('/api/auditoria', auditoria);
+app.use('/api/registro-produccion', registroProduccion);
+app.use('/api/reporte-produccion', reporteProduccion);
 app.use('/api/insumos', insumos);
 app.use('/api/fabricacion', fabricacion);
 app.use('/api/inventario', inventario);
@@ -123,4 +140,5 @@ const port = process.env.PORT || 4200;
 app.listen(port, () => {
   console.log(`ecostone-facturacion backend escuchando en :${port}`);
   iniciarVigilancia();
+  iniciarLiberacionAutomatica();
 });

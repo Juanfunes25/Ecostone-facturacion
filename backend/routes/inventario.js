@@ -6,6 +6,7 @@ import { crearAlerta } from '../lib/alertas.js';
 import { numero } from '../lib/parametros.js';
 import { round3 } from '../lib/cotizacion.js';
 import { traerTodo } from '../lib/consultas.js';
+import { liberarCuradosVencidos } from '../lib/colada.js';
 
 export const inventario = Router();
 const LEE = ['admin', 'gerente', 'bodega', 'produccion', 'vendedor', 'cajero'];
@@ -15,6 +16,7 @@ const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ er
 // Producto terminado: existencias por producto → lote → calidad.
 inventario.get('/pt', requireRole(...LEE), async (req, res) => {
   try {
+    await liberarCuradosVencidos().catch(() => {});
     const [filas, { data: productos }] = await Promise.all([
       traerTodo(() => db.from('stock_pt').select('*').order('producto_id')),
       db.from('productos').select('id, nombre, modelo, color, m2_por_caja, stock_minimo_m2, costo_estandar, tipo').eq('tipo', 'piedra').eq('activo', true).order('nombre'),

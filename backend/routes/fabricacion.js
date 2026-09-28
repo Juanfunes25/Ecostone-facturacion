@@ -6,7 +6,8 @@ import { crearAlerta } from '../lib/alertas.js';
 import { obtenerParametros, numero } from '../lib/parametros.js';
 import { round2, round3 } from '../lib/cotizacion.js';
 import { traerTodo } from '../lib/consultas.js';
-import { actualizarCostoEstandar, costoDeReceta, crearOrdenProduccion, hoyHn, recetaActiva, reservarCotizacion, sumarDias } from '../lib/produccion.js';
+import { actualizarCostoEstandar, costoDeReceta, crearOrdenProduccion, hoyHn, sumarDias } from '../lib/produccion.js';
+import { colarOrden, liberarCuradosVencidos, terminarOrden } from '../lib/colada.js';
 
 export const fabricacion = Router();
 const LEE = ['admin', 'gerente', 'produccion', 'bodega'];
@@ -140,52 +141,12 @@ fabricacion.post('/ordenes', requireRole(...PRODUCE), async (req, res) => {
 // Colada: se descuentan los insumos reales del inventario y empieza el curado.
 fabricacion.post('/ordenes/:id/colar', requireRole(...PRODUCE), async (req, res) => {
   try {
-    const { data: orden } = await db.from('ordenes_produccion').select('*, recetas(dias_curado)').eq('id', req.params.id).single();
+    const { data: orden } = await db.from('ordenes_produccion').select('*').eq('id', req.params.id).single();
     if (!orden) return res.status(404).json({ error: 'Orden no encontrada' });
     if (orden.estado !== 'planificada') throw new Error(`La orden está "${orden.estado}": solo se puede colar una orden planificada`);
-    const { data: consumos } = await db.from('orden_consumos').select('*, materias_primas(nombre, unidad)').eq('orden_id', orden.id);
-    const realesPedidos = new Map((req.body.consumos ?? []).map((c) => [c.mp_id, numero(c.real, NaN)]));
-    const params = await obtenerParametros();
-    const tolerancia = numero(params.tolerancia_consumo_pct, 10);
-
-    // Verifica existencias de TODO antes de mover nada.
-    const { data: stockRows } = await db.from('stock_mp').select('mp_id, stock').in('mp_id', consumos.map((c) => c.mp_id));
-    const stock = new Map((stockRows ?? []).map((s) => [s.mp_id, Number(s.stock)]));
-    const plan = consumos.map((c) => {
-      const real = realesPedidos.has(c.mp_id) && Number.isFinite(realesPedidos.get(c.mp_id)) ? realesPedidos.get(c.mp_id) : Number(c.teorico);
-      if (real < 0) throw new Error('El consumo real no puede ser negativo');
-      return { c, real };
-    });
-    const faltantes = plan.filter(({ c, real }) => (stock.get(c.mp_id) ?? 0) < real).map(({ c, real }) => `${c.materias_primas.nombre} (hay ${stock.get(c.mp_id) ?? 0}, se necesitan ${real} ${c.materias_primas.unidad})`);
-    if (faltantes.length) throw new Error(`Insumos insuficientes: ${faltantes.join('; ')}`);
-
-    let costoMp = 0;
-    const desvios = [];
-    for (const { c, real } of plan) {
-      let costoUnit = Number(c.costo_unitario);
-      if (real > 0) {
-        const { data: mov, error } = await db.rpc('mp_registrar_movimiento', { p_mp: c.mp_id, p_tipo: 'consumo', p_cantidad: -real, p_motivo: `Colada ${orden.lote}`, p_orden: orden.id, p_usuario: req.perfil.id });
-        if (error) throw new Error(error.message);
-        costoUnit = Number(mov.costo_unitario);
-      }
-      costoMp += real * costoUnit;
-      await db.from('orden_consumos').update({ real, costo_unitario: costoUnit }).eq('id', c.id);
-      const teo = Number(c.teorico);
-      if (teo > 0 && Math.abs(real - teo) / teo * 100 > tolerancia) desvios.push({ insumo: c.materias_primas.nombre, teorico: teo, real, desvio_pct: round2(((real - teo) / teo) * 100) });
-    }
-    const hoy = hoyHn();
-    const dias = numero(orden.recetas?.dias_curado, 7);
-    const { data: actualizada, error } = await db.from('ordenes_produccion').update({ estado: 'curando', fecha_colado: new Date().toISOString(), fecha_disponible: sumarDias(hoy, dias), costo_mp: round2(costoMp), responsable_id: orden.responsable_id ?? req.perfil.id }).eq('id', orden.id).select().single();
-    if (error) throw new Error(error.message);
-    if (orden.molde_id && orden.coladas) {
-      const { data: m } = await db.from('moldes').select('usos').eq('id', orden.molde_id).single();
-      await db.from('moldes').update({ usos: Number(m?.usos ?? 0) + Number(orden.coladas) }).eq('id', orden.molde_id);
-    }
-    await registrarAuditoria(req, { accion: 'produccion.colada', entidad: 'orden_produccion', entidadId: orden.id, detalle: { lote: orden.lote, costo_mp: round2(costoMp), desvios } });
-    if (desvios.length) {
-      await crearAlerta(req, { tipo: 'produccion.consumo_desviado', severidad: desvios.some((d) => Math.abs(d.desvio_pct) > tolerancia * 2) ? 'alta' : 'media', titulo: `Consumo fuera de receta en ${orden.lote}: ${desvios.map((d) => `${d.insumo} ${d.desvio_pct > 0 ? '+' : ''}${d.desvio_pct}%`).join(', ')}`, entidad: 'orden_produccion', entidadId: orden.id, detalle: { lote: orden.lote, tolerancia_pct: tolerancia, desvios } });
-    }
-    res.json({ ...actualizada, desvios });
+    const reales = new Map((req.body.consumos ?? []).map((c) => [c.mp_id, numero(c.real, NaN)]));
+    const r = await colarOrden(req, orden, { reales });
+    res.json({ ...r.orden, desvios: r.desvios });
   } catch (e) {
     fallo(res, e);
   }
@@ -194,7 +155,7 @@ fabricacion.post('/ordenes/:id/colar', requireRole(...PRODUCE), async (req, res)
 // Fin del curado: entra producto terminado al inventario y se calcula el costo real.
 fabricacion.post('/ordenes/:id/terminar', requireRole(...PRODUCE), async (req, res) => {
   try {
-    const { data: orden } = await db.from('ordenes_produccion').select('*, recetas(mano_obra_m2, indirectos_m2)').eq('id', req.params.id).single();
+    const { data: orden } = await db.from('ordenes_produccion').select('*').eq('id', req.params.id).single();
     if (!orden) return res.status(404).json({ error: 'Orden no encontrada' });
     if (orden.estado !== 'curando') throw new Error('Solo se puede terminar una orden que ya fue colada y está curando');
     const bueno = round3(numero(req.body.m2_bueno));
@@ -202,49 +163,16 @@ fabricacion.post('/ordenes/:id/terminar', requireRole(...PRODUCE), async (req, r
     const merma = round3(numero(req.body.m2_merma));
     if (bueno < 0 || segunda < 0 || merma < 0) throw new Error('Los m² no pueden ser negativos');
     if (bueno + segunda <= 0) throw new Error('Indica cuántos m² buenos (o de segunda) salieron');
-    const hoy = hoyHn();
     const motivo = String(req.body.motivo_anticipado ?? '').trim();
-    if (orden.fecha_disponible && orden.fecha_disponible > hoy && !(motivo && GERENCIA.includes(req.perfil.rol))) {
+    if (orden.fecha_disponible && orden.fecha_disponible > hoyHn() && !(motivo && GERENCIA.includes(req.perfil.rol))) {
       throw new Error(`El curado termina el ${orden.fecha_disponible}. Solo gerencia puede liberarla antes, con motivo.`);
     }
     const { data: controles } = await db.from('controles_calidad').select('resultado').eq('orden_id', orden.id);
     if ((controles ?? []).some((c) => c.resultado === 'rechazado') && req.perfil.rol === 'produccion') {
       throw new Error('Hay un control de calidad RECHAZADO en esta orden: gerencia debe revisarla antes de liberar el lote');
     }
-    const producido = round3(bueno + segunda);
-    const costoMo = round2(Number(orden.recetas?.mano_obra_m2 ?? 0) * producido);
-    const costoInd = round2(Number(orden.recetas?.indirectos_m2 ?? 0) * producido);
-    const costoTotal = round2(Number(orden.costo_mp ?? 0) + costoMo + costoInd);
-    const costoM2 = producido > 0 ? round2(costoTotal / producido) : 0;
-
-    if (bueno > 0) {
-      const { error } = await db.rpc('pt_registrar_movimiento', { p_producto: orden.producto_id, p_lote: orden.lote, p_calidad: 'primera', p_tipo: 'produccion', p_m2: bueno, p_costo: costoM2, p_motivo: `Lote ${orden.lote}`, p_orden: orden.id, p_usuario: req.perfil.id });
-      if (error) throw new Error(error.message);
-    }
-    if (segunda > 0) {
-      const { error } = await db.rpc('pt_registrar_movimiento', { p_producto: orden.producto_id, p_lote: orden.lote, p_calidad: 'segunda', p_tipo: 'produccion', p_m2: segunda, p_costo: costoM2, p_motivo: `Segunda calidad ${orden.lote}`, p_orden: orden.id, p_usuario: req.perfil.id });
-      if (error) throw new Error(error.message);
-    }
-    const { data: actualizada, error } = await db.from('ordenes_produccion').update({ estado: 'terminada', fecha_terminada: new Date().toISOString(), m2_bueno: bueno, m2_segunda: segunda, m2_merma: merma, costo_mano_obra: costoMo, costo_indirectos: costoInd, costo_total: costoTotal, costo_m2: costoM2 }).eq('id', orden.id).select().single();
-    if (error) throw new Error(error.message);
-    await db.from('productos').update({ costo_estandar: costoM2 }).eq('id', orden.producto_id);
-
-    const total = producido + merma;
-    const mermaPct = total > 0 ? round2((merma / total) * 100) : 0;
-    const rendimiento = Number(orden.m2_planificado) > 0 ? round2((producido / Number(orden.m2_planificado)) * 100) : 0;
-    const params = await obtenerParametros();
-    const mermaMax = numero(params.merma_maxima_pct, 8);
-    await registrarAuditoria(req, { accion: 'produccion.terminar', entidad: 'orden_produccion', entidadId: orden.id, detalle: { lote: orden.lote, bueno, segunda, merma, merma_pct: mermaPct, costo_m2: costoM2, liberada_antes: motivo || undefined, sin_control_calidad: !(controles ?? []).length } });
-    if (mermaPct > mermaMax) {
-      await crearAlerta(req, { tipo: 'produccion.merma_alta', severidad: mermaPct > mermaMax * 1.5 ? 'alta' : 'media', titulo: `Merma alta en ${orden.lote}: ${mermaPct}% (normal hasta ${mermaMax}%)`, entidad: 'orden_produccion', entidadId: orden.id, detalle: { lote: orden.lote, merma_m2: merma, merma_pct: mermaPct, rendimiento_pct: rendimiento } });
-    }
-    let reserva = null;
-    if (orden.cotizacion_id) {
-      const { data: cot } = await db.from('cotizaciones').select('*').eq('id', orden.cotizacion_id).single();
-      const { data: lineas } = await db.from('cotizacion_lineas').select('*').eq('cotizacion_id', orden.cotizacion_id);
-      if (cot && ['aprobada', 'facturada'].includes(cot.estado)) reserva = await reservarCotizacion(req, cot, lineas ?? []);
-    }
-    res.json({ ...actualizada, merma_pct: mermaPct, rendimiento_pct: rendimiento, sin_control_calidad: !(controles ?? []).length, reserva });
+    const r = await terminarOrden(req, orden, { bueno, segunda, merma, motivoAnticipado: motivo });
+    res.json({ ...r.orden, merma_pct: r.merma_pct, rendimiento_pct: r.rendimiento_pct, sin_control_calidad: r.sin_control_calidad, reserva: r.reserva });
   } catch (e) {
     fallo(res, e);
   }
@@ -334,6 +262,7 @@ fabricacion.get('/agenda', requireRole(...LEE, 'vendedor'), async (req, res) => 
 });
 
 fabricacion.get('/resumen', requireRole(...LEE), async (req, res) => {
+  await liberarCuradosVencidos().catch(() => {});
   const [{ data: ordenes }, mp, pt] = await Promise.all([
     db.from('ordenes_produccion').select('estado, m2_planificado, fecha_programada, fecha_disponible'),
     Promise.all([db.from('materias_primas').select('id, stock_minimo').eq('activo', true), traerTodo(() => db.from('stock_mp').select('mp_id, stock').order('mp_id'))]),
