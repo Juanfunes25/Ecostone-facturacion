@@ -181,11 +181,25 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
               <Campo etiqueta="Forma de pago" ancho={160}><select value={pago.forma_pago_id} onChange={(e) => setPago({ ...pago, forma_pago_id: e.target.value })}>{formas.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}</select></Campo>
               <Campo etiqueta="Monto" ancho={140}><input type="number" step="0.01" value={pago.monto} onChange={(e) => setPago({ ...pago, monto: e.target.value })} /></Campo>
               <Campo etiqueta="Referencia (voucher / transferencia)"><input value={pago.referencia} onChange={(e) => setPago({ ...pago, referencia: e.target.value })} /></Campo>
-              <button className="boton-sm" disabled={ocupado || !pago.monto} onClick={() => hacer(() => api.post(`/cotizaciones/${c.id}/pagos`, session, { ...pago, monto: Number(pago.monto) }), 'Pago registrado')}>Registrar pago</button>
+              {(() => {
+                const pagaTodo = Number(pago.monto) >= c.pendiente - 0.004;
+                const estilo = { width: '100%', padding: '18px 20px', fontSize: '1.3rem', fontWeight: 800, minHeight: 64 };
+                return (
+                  <button className="boton" style={estilo} disabled={ocupado || !(Number(pago.monto) > 0)} onClick={async () => {
+                    const r = await hacer(async () => {
+                      await api.post(`/cotizaciones/${c.id}/pagos`, session, { ...pago, monto: Number(pago.monto) });
+                      return pagaTodo ? api.post(`/cotizaciones/${c.id}/facturar`, session, {}) : null;
+                    }, (x) => (x ? `Pago registrado. Factura ${x.factura.numero_factura} emitida.${x.factura.aviso_rtn ? ` ⚠ ${x.factura.aviso_rtn}` : ''}` : 'Pago parcial registrado'));
+                    if (r) { try { await imprimirTicket(r.factura.id, session); } catch { /* la impresión no bloquea */ } }
+                  }}>
+                    {ocupado ? 'Procesando…' : pagaTodo ? `🧾 REGISTRAR PAGO Y GENERAR FACTURA · ${L(Number(pago.monto))}` : `Registrar pago parcial · ${L(Number(pago.monto) || 0)}`}
+                  </button>
+                );
+              })()}
             </div>
           )}
           {c.estado === 'aprobada' && cobra && c.pendiente <= 0.004 && c.pagos.length > 0 && (
-            <button className="boton" disabled={ocupado} onClick={async () => { const r = await hacer(() => api.post(`/cotizaciones/${c.id}/facturar`, session, {}), (x) => `Factura ${x.factura.numero_factura} emitida.${x.factura.aviso_rtn ? ` ⚠ ${x.factura.aviso_rtn}` : ''}`); if (r) { try { await imprimirTicket(r.factura.id, session); } catch { /* la impresión no bloquea */ } } }}>🧾 Emitir factura</button>
+            <button className="boton" style={{ width: '100%', padding: '18px 20px', fontSize: '1.3rem', fontWeight: 800, minHeight: 64 }} disabled={ocupado} onClick={async () => { const r = await hacer(() => api.post(`/cotizaciones/${c.id}/facturar`, session, {}), (x) => `Factura ${x.factura.numero_factura} emitida.${x.factura.aviso_rtn ? ` ⚠ ${x.factura.aviso_rtn}` : ''}`); if (r) { try { await imprimirTicket(r.factura.id, session); } catch { /* la impresión no bloquea */ } } }}>🧾 GENERAR FACTURA</button>
           )}
           {c.estado === 'facturada' && c.venta && (
             <div className="toolbar">
