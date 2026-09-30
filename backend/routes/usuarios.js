@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { olvidarSesiones } from '../middleware/auth.js';
 import { db } from '../db.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { registrarAuditoria } from '../lib/auditoria.js';
@@ -85,6 +86,7 @@ usuarios.post('/', requireRole('admin'), async (req, res) => {
 });
 
 usuarios.put('/:id', requireRole('admin'), async (req, res) => {
+  olvidarSesiones();
   const { nombre, rol, sucursal_id, cierre_ciego, sin_horario, activo } = req.body;
   const { data: anterior } = await db.from('perfiles').select('*').eq('id', req.params.id).maybeSingle();
   const { data, error } = await db
@@ -130,6 +132,7 @@ usuarios.put('/:id', requireRole('admin'), async (req, res) => {
 // Para que Juan pueda resetear la contraseña de un cajero sin tener que
 // entrar al dashboard de Supabase.
 usuarios.post('/:id/reset-password', requireRole('admin'), async (req, res) => {
+  olvidarSesiones();
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: 'Escribe la contraseña nueva' });
   const { error } = await db.auth.admin.updateUserById(req.params.id, { password: claveInterna(password) });

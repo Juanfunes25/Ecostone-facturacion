@@ -1,33 +1,33 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabaseClient.js';
 import { api } from './api.js';
 import { colorSucursal, nombreCortoSucursal, registrarColoresSucursales } from './lib/coloresSucursal.js';
-import Pos from './screens/Pos.jsx';
-import Facturas from './screens/Facturas.jsx';
-import Piedra from './screens/Piedra.jsx';
-import Cotizaciones from './screens/Cotizaciones.jsx';
-import Fabricacion from './screens/Fabricacion.jsx';
-import Recetas from './screens/Recetas.jsx';
-import Insumos from './screens/Insumos.jsx';
-import Inventario from './screens/Inventario.jsx';
-import RegistrarProduccion from './screens/RegistrarProduccion.jsx';
-import ReporteProduccion from './screens/ReporteProduccion.jsx';
-import Trazabilidad from './screens/Trazabilidad.jsx';
-import Clientes from './screens/Clientes.jsx';
-import Usuarios from './screens/Usuarios.jsx';
-import Cierres from './screens/Cierres.jsx';
-import Reportes from './screens/Reportes.jsx';
-import PuntosEmision from './screens/PuntosEmision.jsx';
-import Sucursales from './screens/Sucursales.jsx';
-import Dashboard from './screens/Dashboard.jsx';
-import Impresora from './screens/Impresora.jsx';
-import Bitacora from './screens/Bitacora.jsx';
+const Pos = lazy(() => import('./screens/Pos.jsx'));
+const Facturas = lazy(() => import('./screens/Facturas.jsx'));
+const Piedra = lazy(() => import('./screens/Piedra.jsx'));
+const Cotizaciones = lazy(() => import('./screens/Cotizaciones.jsx'));
+const Fabricacion = lazy(() => import('./screens/Fabricacion.jsx'));
+const Recetas = lazy(() => import('./screens/Recetas.jsx'));
+const Insumos = lazy(() => import('./screens/Insumos.jsx'));
+const Inventario = lazy(() => import('./screens/Inventario.jsx'));
+const RegistrarProduccion = lazy(() => import('./screens/RegistrarProduccion.jsx'));
+const ReporteProduccion = lazy(() => import('./screens/ReporteProduccion.jsx'));
+const Trazabilidad = lazy(() => import('./screens/Trazabilidad.jsx'));
+const Clientes = lazy(() => import('./screens/Clientes.jsx'));
+const Usuarios = lazy(() => import('./screens/Usuarios.jsx'));
+const Cierres = lazy(() => import('./screens/Cierres.jsx'));
+const Reportes = lazy(() => import('./screens/Reportes.jsx'));
+const PuntosEmision = lazy(() => import('./screens/PuntosEmision.jsx'));
+const Sucursales = lazy(() => import('./screens/Sucursales.jsx'));
+const Dashboard = lazy(() => import('./screens/Dashboard.jsx'));
+const Impresora = lazy(() => import('./screens/Impresora.jsx'));
+const Bitacora = lazy(() => import('./screens/Bitacora.jsx'));
 import { useConexionEnVivo } from './lib/tiempoReal.js';
 import Icono, { IsotipoEcoStone } from './components/Icono.jsx';
 import { accesoAEmail, claveInterna } from './lib/acceso.js';
 import { useActualizacion } from './lib/actualizacion.js';
 import { fijarSesionEventos, registrarEvento, reportarLoginFallido } from './lib/eventos.js';
-import Antifraude from './screens/Antifraude.jsx';
+const Antifraude = lazy(() => import('./screens/Antifraude.jsx'));
 import BloqueoInactividad from './components/BloqueoInactividad.jsx';
 import NotificacionesAlertas from './components/NotificacionesAlertas.jsx';
 
@@ -248,6 +248,17 @@ function PantallaApp({ session, onSalir }) {
     }
   }, [perfil?.id]);
 
+  // Calienta los catálogos y descarga en segundo plano las pantallas de uso diario.
+  useEffect(() => {
+    if (!perfil) return;
+    api.precargar(session, perfil.rol);
+    if (perfil.rol === 'produccion') return;
+    const t = setTimeout(() => {
+      for (const f of [() => import('./screens/Cotizaciones.jsx'), () => import('./screens/CotizacionEditor.jsx'), () => import('./screens/Pos.jsx'), () => import('./screens/Facturas.jsx'), () => import('./screens/Inventario.jsx'), () => import('./screens/Clientes.jsx')]) f().catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [perfil?.id]);
+
   // Contador de alertas antifraude sin revisar (sólo administradores).
   useEffect(() => {
     if (perfil?.rol !== 'admin') return undefined;
@@ -340,7 +351,9 @@ function PantallaApp({ session, onSalir }) {
           </button>
         </header>
         <div className="contenido">
-          <Componente session={session} perfil={perfil} sucursales={sucursales} sucursalId={sucursalActivaId} onCambiarSucursalId={setSucursalActivaId} onCarritoOcupado={setCarritoOcupado} onIrA={irA} loteInicial={loteInicial} />
+          <Suspense fallback={<p style={{ color: 'var(--text-dim)' }}>Cargando…</p>}>
+            <Componente session={session} perfil={perfil} sucursales={sucursales} sucursalId={sucursalActivaId} onCambiarSucursalId={setSucursalActivaId} onCarritoOcupado={setCarritoOcupado} onIrA={irA} loteInicial={loteInicial} />
+          </Suspense>
         </div>
         <BloqueoInactividad session={session} perfil={perfil} />
       </div>
@@ -450,19 +463,21 @@ function PantallaApp({ session, onSalir }) {
         </div>
       )}
       <div className="contenido">
+        <Suspense fallback={<p style={{ color: 'var(--text-dim)' }}>Cargando…</p>}>
         <Componente
-          session={session}
-          perfil={perfil}
-          sucursales={sucursales}
-          onCreada={recargarSucursales}
-          onIrA={irA}
-          filtroInicial={actual.id === 'facturas' ? filtroFacturas : null}
-          onFiltroInicialUsado={() => setFiltroFacturas(null)}
-          sucursalId={sucursalActivaId}
-          onCambiarSucursalId={setSucursalActivaId}
-          onCarritoOcupado={setCarritoOcupado}
-          loteInicial={loteInicial}
-        />
+            session={session}
+            perfil={perfil}
+            sucursales={sucursales}
+            onCreada={recargarSucursales}
+            onIrA={irA}
+            filtroInicial={actual.id === 'facturas' ? filtroFacturas : null}
+            onFiltroInicialUsado={() => setFiltroFacturas(null)}
+            sucursalId={sucursalActivaId}
+            onCambiarSucursalId={setSucursalActivaId}
+            onCarritoOcupado={setCarritoOcupado}
+            loteInicial={loteInicial}
+          />
+        </Suspense>
       </div>
       </main>
       <BloqueoInactividad session={session} perfil={perfil} />

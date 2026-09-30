@@ -1,0 +1,12 @@
+# Render (plan gratuito) duerme el servicio tras 15 min sin visitas y despertarlo tarda ~40 s.
+# Este aviso cada 10 minutos lo mantiene despierto para que la app abra al instante.
+name: Mantener activo
+on:
+  schedule:
+    - cron: '*/10 11-23,0-2 * * *'   # 5:00 a.m. – 8:00 p.m. hora de Honduras
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS --max-time 60 https://ecostone-facturacion.onrender.com/api/health/db

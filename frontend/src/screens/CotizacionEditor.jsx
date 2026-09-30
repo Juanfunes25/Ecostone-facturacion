@@ -27,7 +27,7 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
   useEffect(() => {
     (async () => {
       const [productos, listas, pr, params, inventario] = await Promise.all([
-        api.get('/productos', session), api.get('/listas-precio', session), api.get('/listas-precio/precios', session), api.get('/insumos/parametros', session),
+        api.cache('/productos', session), api.cache('/listas-precio', session), api.cache('/listas-precio/precios', session), api.cache('/insumos/parametros', session),
         api.get('/inventario/pt', session).catch(() => []),
       ]);
       const parametros = Object.fromEntries(params.map((p) => [p.clave, Number(p.valor)]));
@@ -52,11 +52,14 @@ export default function CotizacionEditor({ session, perfil, inicial, onGuardada,
     })().catch((e) => setError(e.message));
   }, []);
 
+  // Los clientes se cargan una vez (memoria compartida) y se filtran aquí: el nombre aparece al instante.
+  const [todosClientes, setTodosClientes] = useState([]);
+  useEffect(() => { api.cache('/clientes?todos=1', session).then(setTodosClientes).catch(() => {}); }, []);
   useEffect(() => {
-    if (busca.trim().length < 2) return setResultados([]);
-    const t = setTimeout(() => api.get(`/clientes?q=${encodeURIComponent(busca)}`, session).then((r) => setResultados(r.filter((c) => !c.es_consumidor_final).slice(0, 6))).catch(() => {}), 250);
-    return () => clearTimeout(t);
-  }, [busca]);
+    const q = busca.trim().toLowerCase();
+    if (q.length < 1) return setResultados([]);
+    setResultados(todosClientes.filter((c) => !c.es_consumidor_final && [c.nombre, c.rtn, c.telefono, c.email].some((v) => String(v ?? '').toLowerCase().includes(q))).slice(0, 6));
+  }, [busca, todosClientes]);
 
   const lista = useMemo(() => {
     if (!cat) return null;

@@ -79,7 +79,7 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
   const cobra = ['admin', 'gerente', 'cajero', 'ventas'].includes(perfil.rol);
 
   async function cargar() {
-    const [d, f] = await Promise.all([api.get(`/cotizaciones/${id}`, session), api.get('/formas-pago', session)]);
+    const [d, f] = await Promise.all([api.get(`/cotizaciones/${id}`, session), api.cache('/formas-pago', session)]);
     setC(d);
     setFormas(f);
     setPago((p) => ({ ...p, forma_pago_id: p.forma_pago_id || f.find((x) => x.nombre === 'Efectivo')?.id || f[0]?.id, monto: d.pendiente > 0 ? d.pendiente : '' }));

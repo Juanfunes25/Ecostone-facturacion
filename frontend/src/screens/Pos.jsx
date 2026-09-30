@@ -323,7 +323,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
 
   function cargarCatalogo({ silencioso = false } = {}) {
     if (!silencioso) setCargandoCatalogo(true);
-    return Promise.all([api.get('/categorias', session), api.get('/productos', session)])
+    return Promise.all([api.cache('/categorias', session), api.cache('/productos', session)])
       .then(([cats, prods]) => {
         setCategorias(cats);
         setProductos(prods);
@@ -710,7 +710,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
       const idParaPagar = await guardarOrdenEnCola();
       if (!idParaPagar) throw new Error('No se pudo guardar la orden antes de cobrar');
       const mapaFormas = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' };
-      const formasPago = await api.get('/formas-pago', session);
+      const formasPago = await api.cache('/formas-pago', session);
       const pagosConId = pagos.map((p) => ({
         forma_pago_id: formasPago.find((f) => f.nombre === mapaFormas[p.forma])?.id,
         monto: Number(p.monto),

@@ -36,6 +36,9 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: { output: { manualChunks: { vendor: ['react', 'react-dom'], supabase: ['@supabase/supabase-js'] } } },
+  },
   server: {
     port: 5174,
     proxy: {

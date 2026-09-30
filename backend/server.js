@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
@@ -35,6 +36,7 @@ import { iniciarVigilancia, registrarLoginFallido } from './lib/antifraude.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 
@@ -120,6 +122,9 @@ app.use(
     setHeaders(res, ruta) {
       if (/(index\.html|sw\.js|registerSW\.js|manifest\.webmanifest)$/.test(ruta)) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else if (/[\\/]assets[\\/]/.test(ruta)) {
+        // Archivos con huella en el nombre: no cambian nunca, el navegador los guarda un año.
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
     },
   })

@@ -23,9 +23,37 @@ async function llamar(method, path, session, body) {
   return datos;
 }
 
+// Catálogos que casi no cambian (clientes, productos, listas de precio…): se
+// guardan en memoria unos minutos, se comparten entre pantallas y las
+// peticiones iguales que van en vuelo se juntan en una sola. Cualquier
+// escritura (POST/PUT/DELETE) vacía la memoria para no mostrar datos viejos.
+const memoria = new Map();
+const TTL = 5 * 60 * 1000;
+
+function enMemoria(path, session) {
+  const hit = memoria.get(path);
+  if (hit && Date.now() - hit.ts < TTL) return hit.promesa;
+  const promesa = llamar('GET', path, session);
+  memoria.set(path, { ts: Date.now(), promesa });
+  promesa.catch(() => memoria.delete(path));
+  return promesa;
+}
+
+const escribir = (method) => (path, session, body) => {
+  memoria.clear();
+  return llamar(method, path, session, body);
+};
+
 export const api = {
   get: (path, session) => llamar('GET', path, session),
-  post: (path, session, body) => llamar('POST', path, session, body),
-  put: (path, session, body) => llamar('PUT', path, session, body),
-  del: (path, session) => llamar('DELETE', path, session),
+  // Igual que get, pero con memoria (solo para catálogos).
+  cache: enMemoria,
+  post: escribir('POST'),
+  put: escribir('PUT'),
+  del: (path, session) => { memoria.clear(); return llamar('DELETE', path, session); },
+  // Calienta la memoria apenas se entra, para que cotizar/vender abra al instante.
+  precargar(session, rol) {
+    if (rol === 'produccion') return;
+    for (const r of ['/clientes?todos=1', '/productos', '/listas-precio', '/listas-precio/precios', '/insumos/parametros', '/formas-pago', '/categorias']) enMemoria(r, session).catch(() => {});
+  },
 };
