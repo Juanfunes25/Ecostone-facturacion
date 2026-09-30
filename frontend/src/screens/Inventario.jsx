@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import Modal, { Campo, Etiqueta, Kpis, Pestanas } from '../components/Modal.jsx';
 import { L, num, fechaCorta } from '../lib/fmt.js';
 import { descargarCsv } from '../lib/csv.js';
+import { verPdf } from '../lib/documentos.js';
 
 const TIPO = { inicial: 'Existencia inicial', produccion: 'Lista para vender', reserva: 'Reserva', liberacion: 'Liberación', despacho: 'Despacho', venta: 'Venta', merma: 'Merma', ajuste: 'Ajuste' };
 const norm = (t) => String(t ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
@@ -120,7 +121,13 @@ export default function Inventario({ session, perfil }) {
                       <small style={{ display: 'block', color: 'var(--text-dim)' }}>
                         {p.lotes.length ? p.lotes.map((l) => `${l.lote}${l.calidad === 'segunda' ? ' (2ª)' : ''}: ${num(l.fisico, 1)} ${p.unidad}`).join(' · ') : 'sin existencias'}
                         {p.lotes_secado.length > 0 && <span style={{ color: 'var(--aviso)' }}> · secando: {p.lotes_secado.map((l) => `${l.lote} (lista el ${fechaCorta(l.lista_el)})`).join(', ')}</span>}
-                      </small></td>
+                      </small>
+                      {escribe && [...new Set([...p.lotes.map((l) => l.lote), ...p.lotes_secado.map((l) => l.lote)])].filter((l) => /^EC-/.test(l)).map((lote) => (
+                        <span key={lote} style={{ display: 'inline-flex', gap: 4, marginRight: 8, marginTop: 4 }}>
+                          <button className="boton-sm boton-secundario" onClick={() => verPdf(`/trazabilidad/lote/${encodeURIComponent(lote)}/etiqueta`, session).catch((e) => setError(e.message))}>🏷 Etiqueta {lote}</button>
+                          <button className="boton-sm boton-secundario" title="Una etiqueta por caja" onClick={() => verPdf(`/trazabilidad/lote/${encodeURIComponent(lote)}/etiqueta?modo=cajas`, session).catch((e) => setError(e.message))}>por caja</button>
+                        </span>
+                      ))}</td>
                     <td style={{ textAlign: 'right', color: p.en_secado ? 'var(--aviso)' : undefined }}>{p.en_secado ? `${num(p.en_secado, 2)} ${p.unidad}` : '—'}</td>
                     <td style={{ textAlign: 'right' }}>{num(p.fisico_primera, 2)}</td>
                     <td style={{ textAlign: 'right' }}>{num(p.reservado, 2)}</td>

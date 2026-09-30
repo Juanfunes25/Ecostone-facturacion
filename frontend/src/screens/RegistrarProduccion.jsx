@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { num } from '../lib/fmt.js';
-import { pdfEnVentana, verPdf } from '../lib/documentos.js';
 
 const hora = (iso) => new Date(iso).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Tegucigalpa' });
 const dia = (iso) => new Date(iso).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Tegucigalpa' });
@@ -14,7 +13,7 @@ const boton = (activo) => ({
 const paso = { margin: '20px 0 8px', fontSize: '1.05rem', color: 'var(--text-dim)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 };
 
 // Pantalla del operario (celular): 1) modelo 2) color 3) cuántas cajas 4) ENVIAR.
-// La etiqueta del lote se abre sola; la fecha, la hora y el usuario se guardan solos.
+// La fecha, la hora y el usuario se guardan solos. La etiqueta se genera desde Inventario.
 export default function RegistrarProduccion({ session, perfil }) {
   const [catalogo, setCatalogo] = useState([]);
   const [recientes, setRecientes] = useState([]);
@@ -54,19 +53,14 @@ export default function RegistrarProduccion({ session, perfil }) {
   const sumar = (n) => setCantidad((c) => Math.max(0, Math.min(9999, c + n)));
 
   async function enviar() {
-    // La ventana de la etiqueta se abre en el mismo toque (si no, el navegador la bloquea).
-    const ventana = window.open('', '_blank');
-    if (ventana) ventana.document.body.textContent = 'Generando etiqueta…';
     setEnviando(true);
     setError('');
     try {
       const r = await api.post('/registro-produccion', session, { producto_id: producto.id, cantidad });
       setResultado({ ...r, producto_id: producto.id });
-      if (ventana) pdfEnVentana(ventana, `/registro-produccion/${r.orden_id}/etiqueta`, session).catch((e) => setError(e.message));
       setCantidad(0); setConfirmando(false); setModelo(''); setColor('');
       cargar().catch(() => {});
     } catch (e) {
-      ventana?.close();
       setError(e.message);
       setConfirmando(false);
     } finally {
@@ -85,7 +79,6 @@ export default function RegistrarProduccion({ session, perfil }) {
           <p style={{ fontSize: '1.1rem', margin: '0 0 4px' }}>{resultado.producto}</p>
           <p style={{ margin: '4px 0', color: 'var(--text-dim)' }}>Lote {resultado.lote} · {dia(resultado.registrado_at)} {hora(resultado.registrado_at)}</p>
           {resultado.avisos.map((a) => <div key={a} className="error" style={{ marginTop: 8 }}>{a}</div>)}
-          <button style={{ ...boton(false), marginTop: 12 }} onClick={() => verPdf(`/registro-produccion/${resultado.orden_id}/etiqueta`, session).catch((e) => setError(e.message))}>🏷 Imprimir etiqueta</button>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
             <button style={boton(true)} onClick={() => { const p = catalogo.find((x) => x.id === resultado.producto_id); if (p) elegirProducto(p); setResultado(null); }}>Otra igual</button>
             <button style={boton(false)} onClick={() => setResultado(null)}>Nueva</button>

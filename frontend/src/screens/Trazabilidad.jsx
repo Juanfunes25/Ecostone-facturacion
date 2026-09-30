@@ -50,7 +50,7 @@ export default function Trazabilidad({ session, perfil, loteInicial }) {
       {error && <div className="error" onClick={() => setError('')}>{error}</div>}
       <div className="panel">
         <h2>Trazabilidad de lotes</h2>
-        <p style={{ color: 'var(--text-dim)', marginTop: 0 }}>Busca por número de lote o por producto, o escanea el QR de la etiqueta. Cada producción genera su etiqueta sola al registrarse.</p>
+        <p style={{ color: 'var(--text-dim)', marginTop: 0 }}>Busca por número de lote o por producto, o escanea el QR de la etiqueta. La etiqueta se imprime desde aquí o desde Inventario.</p>
         <div className="toolbar">
           <input placeholder="Lote (ej.: EC-260928-01) o producto…" value={q} onChange={(e) => setQ(e.target.value)} style={{ flex: '1 1 260px' }} />
         </div>
