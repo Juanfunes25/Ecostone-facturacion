@@ -326,6 +326,27 @@ function PantallaApp({ session, onSalir }) {
   const Componente = actual.Componente;
   const puedeCambiarSucursal = !perfil.sucursal_id && sucursales.length > 1;
 
+  if (perfil.rol === 'produccion') {
+    return (
+      <div className="app-produccion" style={{ '--color-sucursal': colorActivo }}>
+        <header className="app-produccion-barra">
+          <span className="sidebar-avatar">{(perfil.nombre ?? '?').trim().slice(0, 1).toUpperCase()}</span>
+          <strong style={{ flex: 1 }}>{perfil.nombre}</strong>
+          <button className="boton-icono" onClick={cambiarTema} title={tema === 'oscuro' ? 'Modo claro' : 'Modo noche'} aria-label="Cambiar tema">
+            <Icono nombre={tema === 'oscuro' ? 'sol' : 'luna'} />
+          </button>
+          <button className="boton-icono" onClick={salir} title="Cerrar sesión" aria-label="Cerrar sesión">
+            <Icono nombre="salir" tam={18} />
+          </button>
+        </header>
+        <div className="contenido">
+          <Componente session={session} perfil={perfil} sucursales={sucursales} sucursalId={sucursalActivaId} onCambiarSucursalId={setSucursalActivaId} onCarritoOcupado={setCarritoOcupado} onIrA={irA} loteInicial={loteInicial} />
+        </div>
+        <BloqueoInactividad session={session} perfil={perfil} />
+      </div>
+    );
+  }
+
   return (
     <div className={`app-shell${compacta ? ' barra-compacta' : ''}${menuMovil ? ' menu-abierto' : ''}`} style={{ '--color-sucursal': colorActivo }}>
       <header className="barra-movil">

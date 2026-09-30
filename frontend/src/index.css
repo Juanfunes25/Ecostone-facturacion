@@ -4476,3 +4476,8 @@ table.tabla tbody tr:hover {
     font-size: 1.05em;
   }
 }
+
+/* Operario de producción: sin barra lateral */
+.app-produccion { min-height: 100vh; background: var(--navy); border-top: 4px solid var(--color-sucursal); }
+.app-produccion-barra { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--sidebar); color: #fff; }
+.app-produccion .contenido { max-width: 640px; margin: 0 auto; }

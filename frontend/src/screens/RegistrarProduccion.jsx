@@ -26,6 +26,7 @@ export default function RegistrarProduccion({ session, perfil }) {
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [error, setError] = useState('');
+  const [verRecientes, setVerRecientes] = useState(false);
 
   async function cargar() {
     const [c, r] = await Promise.all([api.get('/registro-produccion/catalogo', session), api.get('/registro-produccion/recientes', session)]);
@@ -41,13 +42,6 @@ export default function RegistrarProduccion({ session, perfil }) {
   const tienePlana = variantes.some((p) => !p.esquina);
   const producto = variantes.find((p) => (tipo === 'esquina') === p.esquina) ?? (variantes.length === 1 ? variantes[0] : null);
   const valida = producto && cantidad > 0;
-
-  // Lo último que produjo esta persona: un toque y ya está elegido.
-  const frecuentes = useMemo(() => {
-    const vistos = new Map();
-    for (const r of recientes) if (!vistos.has(r.producto)) vistos.set(r.producto, r);
-    return [...vistos.keys()].map((nombre) => catalogo.find((p) => p.nombre === nombre)).filter(Boolean).slice(0, 4);
-  }, [recientes, catalogo]);
 
   function elegirProducto(p) {
     setModelo(p.modelo); setColor(p.color); setTipo(p.esquina ? 'esquina' : 'plana'); setResultado(null); setError('');
@@ -101,15 +95,6 @@ export default function RegistrarProduccion({ session, perfil }) {
 
       {!resultado && (
         <>
-          {frecuentes.length > 0 && !modelo && (
-            <>
-              <h3 style={paso}>Lo último que hiciste</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-                {frecuentes.map((p) => <button key={p.id} style={boton(false)} onClick={() => elegirProducto(p)}>{p.nombre}</button>)}
-              </div>
-            </>
-          )}
-
           <h3 style={paso}>1 · Modelo</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
             {modelos.map((m) => <button key={m} style={boton(modelo === m)} onClick={() => elegirModelo(m)}>{m}</button>)}
@@ -179,8 +164,16 @@ export default function RegistrarProduccion({ session, perfil }) {
 
       {!resultado && recientes.length > 0 && (
         <div className="panel" style={{ marginTop: 24 }}>
-          <h3 style={{ marginTop: 0 }}>{perfil.rol === 'produccion' ? 'Lo que registré' : 'Registros recientes'}</h3>
-          {recientes.slice(0, 8).map((r) => (
+          <button
+            type="button"
+            onClick={() => setVerRecientes((v) => !v)}
+            aria-expanded={verRecientes}
+            style={{ all: 'unset', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', fontWeight: 700 }}
+          >
+            <span>{perfil.rol === 'produccion' ? 'Lo que registré' : 'Registros recientes'} ({Math.min(recientes.length, 8)})</span>
+            <span aria-hidden="true">{verRecientes ? '▲' : '▼'}</span>
+          </button>
+          {verRecientes && recientes.slice(0, 8).map((r) => (
             <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 0', borderTop: '1px solid var(--border)' }}>
               <div style={{ minWidth: 0 }}>
                 <strong>{r.producto}</strong>
