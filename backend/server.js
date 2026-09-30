@@ -10,7 +10,7 @@ import { productos } from './routes/productos.js';
 import { clientes } from './routes/clientes.js';
 import { puntosEmision } from './routes/puntosEmision.js';
 import { ventas } from './routes/ventas.js';
-import { notasCredito } from './routes/notasCredito.js';
+import { anulaciones } from './routes/anulaciones.js';
 import { cierres } from './routes/cierres.js';
 import { reportes } from './routes/reportes.js';
 import { usuarios } from './routes/usuarios.js';
@@ -93,7 +93,7 @@ app.use('/api/clientes', clientes);
 app.use('/api/puntos-emision', puntosEmision);
 app.use('/api/ventas', ventas);
 app.use('/api/ventas', facturaImpresion); // /api/ventas/:id/ticket, /api/ventas/:id/pdf
-app.use('/api/notas-credito', notasCredito);
+app.use('/api/anulaciones', anulaciones);
 app.use('/api/cierres', cierres);
 // Reportes y dashboard son de gerencia: antes cualquier cajero
 // logueado podía pedir las ventas de todas las sucursales por la API.

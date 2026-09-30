@@ -31,7 +31,6 @@ const ETIQUETA_TIPO = {
   'cierre.reincidencia': 'Faltantes repetidos',
   'cierre.sin_imprimir': 'Facturas sin imprimir',
   'venta.anular': 'Factura anulada',
-  'venta.nota_credito': 'Nota de crédito',
   'venta.descartar_orden': 'Orden descartada',
   'venta.doble_factura': 'Posible doble factura',
   'venta.reimpresion_repetida': 'Reimpresiones repetidas',

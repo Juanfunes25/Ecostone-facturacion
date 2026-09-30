@@ -43,8 +43,6 @@ export default function Facturas({ session, perfil, sucursales, filtroInicial, o
   const [seleccionada, setSeleccionada] = useState(null);
   const [error, setError] = useState('');
   const [motivoAnulacion, setMotivoAnulacion] = useState('');
-  const [montoAnulacion, setMontoAnulacion] = useState('');
-  const [notasCredito, setNotasCredito] = useState([]);
   const [reenviando, setReenviando] = useState(false);
 
   const cajerosDisponibles = useMemo(
@@ -137,18 +135,13 @@ export default function Facturas({ session, perfil, sucursales, filtroInicial, o
     setSeleccionada(detalle);
     registrarEvento('factura.ver', { factura: detalle.numero_factura, total: Number(detalle.total) }, detalle.sucursal_id);
     setMotivoAnulacion('');
-    setMontoAnulacion(detalle.total);
-    setNotasCredito(['cajero', 'ventas'].includes(perfil.rol) ? [] : await api.get(`/notas-credito?venta_id=${id}`, session));
   }
 
   async function anular() {
-    if (!motivoAnulacion.trim() || !montoAnulacion) return;
+    if (!motivoAnulacion.trim()) return;
+    if (!window.confirm(`¿Anular la factura ${seleccionada.numero_factura}? No se puede deshacer; la piedra vuelve al inventario.`)) return;
     try {
-      await api.post('/notas-credito', session, {
-        venta_id: seleccionada.id,
-        motivo: motivoAnulacion,
-        monto: Number(montoAnulacion),
-      });
+      await api.post('/anulaciones', session, { venta_id: seleccionada.id, motivo: motivoAnulacion });
       setSeleccionada(null);
       buscar();
     } catch (e) {
@@ -353,42 +346,14 @@ export default function Facturas({ session, perfil, sucursales, filtroInicial, o
               </button>
             )}
 
-            {notasCredito.length > 0 && (
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginBottom: 10 }}>
-                <strong style={{ fontSize: '0.9em', color: 'var(--text-dim)' }}>Notas de crédito emitidas</strong>
-                {notasCredito.map((n) => (
-                  <div key={n.id} className="pos-orden-linea">
-                    <span>{n.motivo}</span>
-                    <span>L {Number(n.monto).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {perfil.rol === 'admin' && !seleccionada.anulada && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-                <input
-                  placeholder="Motivo de la nota de crédito"
-                  value={motivoAnulacion}
-                  onChange={(e) => setMotivoAnulacion(e.target.value)}
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Monto a anular"
-                  value={montoAnulacion}
-                  onChange={(e) => setMontoAnulacion(e.target.value)}
-                />
+                <input placeholder="Motivo de la anulación" value={motivoAnulacion} onChange={(e) => setMotivoAnulacion(e.target.value)} />
                 <p style={{ fontSize: '0.8em', color: 'var(--text-dim)', marginTop: -6 }}>
-                  Si el monto es igual al total, la factura queda marcada como anulada. Si es menor, se
-                  registra como nota de crédito parcial (el correlativo de la factura no se toca).
+                  Una factura emitida no se modifica: solo se puede reimprimir o anular. Al anular conserva su número y la piedra regresa al inventario.
                 </p>
-                <button
-                  className="boton-peligro"
-                  disabled={!motivoAnulacion.trim() || !montoAnulacion}
-                  onClick={anular}
-                >
-                  Emitir nota de crédito
+                <button className="boton-peligro" disabled={!motivoAnulacion.trim()} onClick={anular}>
+                  Anular factura
                 </button>
               </div>
             )}

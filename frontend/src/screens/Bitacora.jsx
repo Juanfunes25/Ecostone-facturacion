@@ -13,7 +13,6 @@ const ACCIONES = {
   'venta.ver_pdf': 'Abrió PDF',
   'venta.reenviar_correo': 'Reenvió correo',
   'venta.anular': 'Anuló factura',
-  'venta.nota_credito_parcial': 'Nota de crédito parcial',
   'cotizacion.convertir_factura': 'Facturó cotización',
   'cotizacion.aceptada': 'Aceptó y agendó cotización',
   'cotizacion.cambio_estado': 'Cambió estado de cotización',
@@ -54,7 +53,6 @@ const ACCIONES = {
 const SENSIBLES = new Set([
   'venta.descartar_orden',
   'venta.anular',
-  'venta.nota_credito_parcial',
   'venta.reimprimir_ticket',
   'cai.editar',
   'cai.activar',
@@ -100,8 +98,7 @@ function resumen(r) {
     case 'venta.facturar':
       return `L ${d.total} · ${(d.pagos ?? []).map((p) => `${p.forma} L${p.monto}`).join(' + ')}${d.descuento_porcentaje ? ` · desc. ${d.descuento_porcentaje}%` : ''} · ${d.cliente ?? ''}`;
     case 'venta.anular':
-    case 'venta.nota_credito_parcial':
-      return `L ${d.monto_acreditado} de L ${d.total_factura} · Motivo: ${d.motivo}`;
+      return `L ${d.total_factura} · Motivo: ${d.motivo}`;
     case 'producto.editar':
     case 'usuario.editar':
     case 'cai.editar':

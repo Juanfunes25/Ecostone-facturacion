@@ -271,7 +271,7 @@ cotizaciones.post('/:id/anular', requireRole(...GERENCIA), async (req, res) => {
     if (!motivo) throw err('Indica el motivo de la anulación');
     const cot = await cargar(req.params.id);
     if (!cot) return res.status(404).json({ error: 'Cotización no encontrada' });
-    if (cot.estado === 'facturada') throw err('Ya está facturada: anula la factura con una nota de crédito', 409);
+    if (cot.estado === 'facturada') throw err('Ya está facturada: la factura solo se puede anular desde Facturas', 409);
     if (cot.pagado > 0) throw err(`Ya tiene L ${cot.pagado.toFixed(2)} cobrados: devuelve o aplica el pago antes de anular`, 409);
     await liberarReservas(req, cot.id);
     await db.from('ordenes_produccion').update({ estado: 'cancelada', notas: `Cancelada por anulación de la cotización #${cot.numero}` }).eq('cotizacion_id', cot.id).eq('estado', 'planificada');

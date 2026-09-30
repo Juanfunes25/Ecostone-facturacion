@@ -38,21 +38,6 @@ async function ventasDelRango({ sucursal_id, fechaInicio, fechaFin }) {
   });
 }
 
-// Notas de crédito del período (cuentan en el mes en que se emiten, que es
-// como se declaran). Las de anulación total ya salen del reporte porque la
-// factura queda "anulada"; aquí interesan sobre todo las parciales.
-async function notasDelRango({ sucursal_id, fechaInicio, fechaFin }) {
-  const notas = await traerTodo(() => {
-    let q = db
-      .from('notas_credito')
-      .select('id, venta_id, numero_nota, motivo, monto, estado, created_at, usuario:usuario_id(nombre), ventas(numero_factura, sucursal_id, total, isv_total, anulada, sucursales(nombre), puntos_emision(es_borrador))')
-      .neq('estado', 'anulada');
-    q = filtrarRango(q, 'created_at', fechaInicio, fechaFin);
-    return q.order('created_at', { ascending: true }).order('id', { ascending: true });
-  });
-  return sucursal_id ? notas.filter((nc) => nc.ventas?.sucursal_id === sucursal_id) : notas;
-}
-
 async function categoriasPorProducto(ids) {
   if (ids.length === 0) return new Map();
   const productos = await traerPorIds(
@@ -81,17 +66,15 @@ function formaDePago(nombre) {
   return nombre || 'Otro';
 }
 
-function kpis(validas, anuladas, notasParciales) {
+function kpis(validas, anuladas) {
   const ventas = validas.reduce((s, v) => s + n(v.total), 0);
   const descuentos = validas.reduce((s, v) => s + n(v.descuento), 0);
-  const nc = notasParciales.reduce((s, x) => s + n(x.monto), 0);
   const unidades = validas.reduce((s, v) => s + (v.detalle_venta ?? []).reduce((a, d) => a + n(d.cantidad), 0), 0);
   return redondearTodo({
     ventas_brutas: ventas + descuentos,
     descuentos,
     ventas,
-    notas_credito: nc,
-    ventas_netas: ventas - nc,
+    ventas_netas: ventas,
     isv: validas.reduce((s, v) => s + n(v.isv_total), 0),
     facturas: validas.length,
     ticket_promedio: validas.length > 0 ? ventas / validas.length : 0,
@@ -104,12 +87,8 @@ function kpis(validas, anuladas, notasParciales) {
 // Resumen fiscal de un grupo de facturas (fiscales o borrador) con el rango
 // de numeración emitido por sucursal — lo que pide el contador para la
 // declaración.
-function resumenFiscal(lista, notas) {
+function resumenFiscal(lista) {
   const validas = lista.filter((v) => !v.anulada);
-  const ncIsv = notas.reduce((s, nc) => {
-    const total = n(nc.ventas?.total);
-    return s + (total > 0 ? (n(nc.monto) * n(nc.ventas?.isv_total)) / total : 0);
-  }, 0);
   // Rango por sucursal y serie (prefijo sin los 8 dígitos del correlativo),
   // comparando el correlativo como número y no como texto.
   const rangos = new Map();
@@ -151,10 +130,8 @@ function resumenFiscal(lista, notas) {
       gravado_15: validas.reduce((s, v) => s + n(v.subtotal_gravado_15), 0),
       isv: validas.reduce((s, v) => s + n(v.isv_total), 0),
       total: validas.reduce((s, v) => s + n(v.total), 0),
-      notas_credito: notas.reduce((s, nc) => s + n(nc.monto), 0),
-      isv_notas_credito: ncIsv,
     }),
-    isv_neto: round2(validas.reduce((s, v) => s + n(v.isv_total), 0) - ncIsv),
+    isv_neto: round2(validas.reduce((s, v) => s + n(v.isv_total), 0)),
     facturas: validas.length,
     anuladas: lista.length - validas.length,
     rangos: listaRangos.sort((a, b) => a.sucursal.localeCompare(b.sucursal) || a.desde.localeCompare(b.desde)),
@@ -163,10 +140,9 @@ function resumenFiscal(lista, notas) {
 }
 
 async function construirReporte(filtros) {
-  const [ventas, notas, gastos] = await Promise.all([ventasDelRango(filtros), notasDelRango(filtros), gastosDelRango(filtros)]);
+  const [ventas, gastos] = await Promise.all([ventasDelRango(filtros), gastosDelRango(filtros)]);
   const validas = ventas.filter((v) => !v.anulada);
   const anuladas = ventas.filter((v) => v.anulada);
-  const notasParciales = notas.filter((nc) => !nc.ventas?.anulada);
 
   const idsProducto = validas.flatMap((v) => (v.detalle_venta ?? []).map((d) => d.producto_id));
   const categoriaDe = await categoriasPorProducto(idsProducto);
@@ -303,11 +279,9 @@ async function construirReporte(filtros) {
   const esBorrador = (v) => v.puntos_emision?.es_borrador ?? true;
   const fiscales = ventas.filter((v) => !esBorrador(v));
   const borrador = ventas.filter(esBorrador);
-  const ncFiscales = notasParciales.filter((nc) => !(nc.ventas?.puntos_emision?.es_borrador ?? true));
-  const ncBorrador = notasParciales.filter((nc) => nc.ventas?.puntos_emision?.es_borrador ?? true);
 
   return {
-    kpis: kpis(validas, anuladas, notasParciales),
+    kpis: kpis(validas, anuladas),
     por_dia: [...porDia.values()].map((d) => redondearTodo({ ...d, ticket_promedio: d.facturas ? d.total / d.facturas : 0 })).sort((a, b) => a.fecha.localeCompare(b.fecha)),
     por_hora: porHora.map(redondearTodo),
     calor: calor.map((fila) => fila.map(round2)),
@@ -339,17 +313,7 @@ async function construirReporte(filtros) {
       cajero: v.perfiles?.nombre ?? '',
       total: n(v.total),
     })),
-    notas_credito: notas.map((nc) => ({
-      numero_nota: nc.numero_nota,
-      numero_factura: nc.ventas?.numero_factura ?? '',
-      sucursal: nc.ventas?.sucursales?.nombre ?? '',
-      fecha: nc.created_at,
-      monto: n(nc.monto),
-      motivo: nc.motivo,
-      usuario: nc.usuario?.nombre ?? '',
-      tipo: nc.ventas?.anulada ? 'Anulación total' : 'Parcial',
-    })),
-    isv: { fiscal: resumenFiscal(fiscales, ncFiscales), borrador: resumenFiscal(borrador, ncBorrador) },
+    isv: { fiscal: resumenFiscal(fiscales), borrador: resumenFiscal(borrador) },
     gastos: redondearTodo({ total: gastosTotal, movimientos: gastos.length }),
     gastos_por_tipo: [...gastosPorTipo.values()].map(redondearTodo).sort((a, b) => b.monto - a.monto),
     libro_ventas: ventas.map((v) => ({
@@ -392,13 +356,12 @@ reportes.get('/completo', async (req, res) => {
 
     const [reporte, previo] = await Promise.all([
       construirReporte(filtros),
-      Promise.all([ventasDelRango({ ...filtros, ...anterior }), notasDelRango({ ...filtros, ...anterior })]),
+      ventasDelRango({ ...filtros, ...anterior }),
     ]);
-    const [ventasPrevias, notasPrevias] = previo;
+    const ventasPrevias = previo;
     reporte.kpis_anterior = kpis(
       ventasPrevias.filter((v) => !v.anulada),
-      ventasPrevias.filter((v) => v.anulada),
-      notasPrevias.filter((nc) => !nc.ventas?.anulada)
+      ventasPrevias.filter((v) => v.anulada)
     );
     reporte.rango_anterior = { desde: fechaHn(anterior.fechaInicio), hasta: fechaHn(anterior.fechaFin) };
     res.json(reporte);

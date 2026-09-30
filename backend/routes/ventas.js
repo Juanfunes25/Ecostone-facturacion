@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { descontarInventarioVenta, verificarInventarioVenta } from '../lib/inventarioVenta.js';
 import {
   calcularTotales,
   descuentoDeLinea,
@@ -463,12 +464,23 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
   }
   const cambio = round2(totalPagado - Number(venta.total));
 
+  // La piedra debe existir en inventario antes de gastar un correlativo.
+  await verificarInventarioVenta(venta);
+
   const { data: ventaFinal, error: errFinalizar } = await db.rpc('finalizar_venta', {
     p_venta_id: venta.id,
     p_efectivo: efectivo_recibido ?? totalPagado,
     p_cambio: cambio,
   });
   if (errFinalizar) throw Object.assign(new Error(errFinalizar.message), { status: 409 });
+
+  // La factura ya salió: la piedra sale del inventario (si algo falla queda alerta).
+  try {
+    await descontarInventarioVenta(req, venta, ventaFinal.numero_factura);
+  } catch (e) {
+    console.error('descontar inventario', venta.id, e.message);
+    crearAlerta(req, { tipo: 'inventario.descuento_fallido', severidad: 'alta', titulo: `Factura ${ventaFinal.numero_factura}: no se pudo descontar el inventario (${e.message})`, sucursalId: venta.sucursal_id, entidad: 'venta', entidadId: venta.id, detalle: { factura: ventaFinal.numero_factura, error: e.message } }).catch(() => {});
+  }
 
   const filasPago = pagos.map((p) => ({ venta_id: venta.id, forma_pago_id: p.forma_pago_id, monto: round2(Number(p.monto)) }));
   const { error: errPagos } = await db.from('venta_pagos').insert(filasPago);
