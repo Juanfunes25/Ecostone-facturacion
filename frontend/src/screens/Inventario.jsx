@@ -134,7 +134,7 @@ export default function Inventario({ session, perfil }) {
                       {escribe && (
                         <div style={{ position: 'relative', display: 'inline-block' }}>
                           <button className="boton-icono" aria-label="Acciones de inventario" title="Existencia, conteo y ajuste" onClick={() => setMenuFila(menuFila === p.id ? null : p.id)}>
-                            <Icono nombre="mas" tam={20} />
+                            <Icono nombre="ajustes" tam={22} />
                           </button>
                           {menuFila === p.id && (
                             <>
