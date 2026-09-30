@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { num } from '../lib/fmt.js';
+import { pdfEnVentana, verPdf } from '../lib/documentos.js';
+
+const CLAVE_AUTO = 'ecostone:abrir-etiqueta';
+const leerAuto = () => { try { return localStorage.getItem(CLAVE_AUTO) !== '0'; } catch { return true; } };
 
 const hora = (iso) => new Date(iso).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Tegucigalpa' });
 const dia = (iso) => new Date(iso).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Tegucigalpa' });
@@ -25,6 +29,8 @@ export default function RegistrarProduccion({ session, perfil }) {
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [error, setError] = useState('');
+  const [autoEtiqueta, setAutoEtiqueta] = useState(leerAuto);
+  const cambiarAuto = (v) => { setAutoEtiqueta(v); try { localStorage.setItem(CLAVE_AUTO, v ? '1' : '0'); } catch { /* sin almacenamiento */ } };
 
   async function cargar() {
     const [c, r] = await Promise.all([api.get('/registro-produccion/catalogo', session), api.get('/registro-produccion/recientes', session)]);
@@ -49,14 +55,19 @@ export default function RegistrarProduccion({ session, perfil }) {
   }
 
   async function enviar() {
+    // La ventana de la etiqueta se abre en el mismo toque (si no, el navegador la bloquea).
+    const ventana = autoEtiqueta ? window.open('', '_blank') : null;
+    if (ventana) ventana.document.body.textContent = 'Generando etiqueta…';
     setEnviando(true);
     setError('');
     try {
       const r = await api.post('/registro-produccion', session, { producto_id: producto.id, cantidad: Number(cantidad), nota });
       setResultado(r);
+      if (ventana) pdfEnVentana(ventana, `/registro-produccion/${r.orden_id}/etiqueta`, session).catch((e) => setError(e.message));
       setCantidad(''); setNota(''); setVerNota(false); setConfirmando(false); setModelo(''); setColor('');
       cargar().catch(() => {});
     } catch (e) {
+      ventana?.close();
       setError(e.message);
       setConfirmando(false);
     } finally {
@@ -77,7 +88,12 @@ export default function RegistrarProduccion({ session, perfil }) {
           <p style={{ fontSize: '1.2rem', margin: '4px 0' }}><strong>{num(resultado.cantidad, 2)} {resultado.unidad}</strong> de {resultado.producto}</p>
           <p style={{ margin: '4px 0', color: 'var(--text-dim)' }}>Lote {resultado.lote} · {dia(resultado.registrado_at)} {hora(resultado.registrado_at)} · queda lista para vender el {resultado.disponible_desde}</p>
           {resultado.avisos.map((a) => <div key={a} className="error" style={{ marginTop: 8 }}>{a}</div>)}
-          <button style={{ ...boton(true), width: '100%', marginTop: 12 }} onClick={() => setResultado(null)}>Registrar otra</button>
+          <p style={{ margin: '8px 0 0', color: 'var(--ok)' }}>🏷 La etiqueta del lote ya se generó (fecha, lote y código QR de trazabilidad).</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+            <button style={boton(false)} onClick={() => verPdf(`/registro-produccion/${resultado.orden_id}/etiqueta`, session).catch((e) => setError(e.message))}>🏷 Imprimir etiqueta</button>
+            <button style={boton(false)} onClick={() => verPdf(`/registro-produccion/${resultado.orden_id}/etiqueta?modo=cajas`, session).catch((e) => setError(e.message))}>Etiquetas por caja</button>
+          </div>
+          <button style={{ ...boton(true), width: '100%', marginTop: 10 }} onClick={() => setResultado(null)}>Registrar otra</button>
         </div>
       )}
 
@@ -117,6 +133,7 @@ export default function RegistrarProduccion({ session, perfil }) {
                 ? <button className="boton-sm boton-secundario" style={{ marginTop: 10 }} onClick={() => setVerNota(true)}>+ Agregar nota</button>
                 : <input style={{ marginTop: 10, width: '100%', minHeight: 48 }} placeholder="Nota (opcional)" maxLength={200} value={nota} onChange={(e) => setNota(e.target.value)} />}
               {!producto.con_receta && <p style={{ color: 'var(--aviso)', fontSize: '0.9rem' }}>Este modelo aún no tiene receta: se guardará la producción, pero no se descontará materia prima.</p>}
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, color: 'var(--text-dim)' }}><input type="checkbox" style={{ width: 'auto' }} checked={autoEtiqueta} onChange={(e) => cambiarAuto(e.target.checked)} /> Abrir la etiqueta al enviar</label>
               <button disabled={!valida || enviando} onClick={() => setConfirmando(true)}
                 style={{ ...boton(true), width: '100%', marginTop: 16, minHeight: 68, fontSize: '1.3rem', background: valida ? 'var(--ok)' : undefined, borderColor: valida ? 'var(--ok)' : undefined, opacity: valida ? 1 : 0.5 }}>
                 ENVIAR

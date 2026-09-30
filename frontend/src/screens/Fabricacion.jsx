@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal, { Campo, Etiqueta, Kpis, Pestanas } from '../components/Modal.jsx';
 import { L, num, fechaCorta, hoyIso } from '../lib/fmt.js';
+import { verPdf } from '../lib/documentos.js';
 
 const TONO = { planificada: 'info', curando: 'aviso', terminada: 'ok', cancelada: 'gris' };
 const TIPO_AGENDA = { colada: ['Colada', 'info'], inventario: ['Lista para vender', 'ok'], entrega: ['Entrega', 'ok'] };
@@ -127,7 +128,7 @@ export default function Fabricacion({ session, perfil, onIrA }) {
                   </td>
                   <td>{fechaCorta(x.fecha_programada)}</td><td>{fechaCorta(x.fecha_disponible)}</td>
                   <td>{x.cotizaciones ? `Cot. #${x.cotizaciones.numero}` : 'Stock'}</td>
-                  <td><button className="boton-sm boton-secundario" onClick={() => abrirDetalle(x.id)}>Abrir</button></td>
+                  <td style={{ whiteSpace: 'nowrap' }}><button className="boton-sm boton-secundario" onClick={() => abrirDetalle(x.id)}>Abrir</button>{' '}{x.fecha_colado && <button className="boton-sm boton-secundario" title="Etiqueta del lote" onClick={() => verPdf(`/trazabilidad/lote/${encodeURIComponent(x.lote)}/etiqueta`, session).catch((e) => setError(e.message))}>🏷 Etiqueta</button>}{' '}{x.fecha_colado && onIrA && <button className="boton-sm boton-secundario" onClick={() => onIrA('trazabilidad', { lote: x.lote })}>Trazar</button>}</td>
                 </tr>
               ))}
               {ordenes.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-dim)' }}>Sin órdenes</td></tr>}

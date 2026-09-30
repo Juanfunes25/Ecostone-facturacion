@@ -12,6 +12,7 @@ import Insumos from './screens/Insumos.jsx';
 import Inventario from './screens/Inventario.jsx';
 import RegistrarProduccion from './screens/RegistrarProduccion.jsx';
 import ReporteProduccion from './screens/ReporteProduccion.jsx';
+import Trazabilidad from './screens/Trazabilidad.jsx';
 import Clientes from './screens/Clientes.jsx';
 import Usuarios from './screens/Usuarios.jsx';
 import Cierres from './screens/Cierres.jsx';
@@ -98,6 +99,7 @@ const PANTALLAS = [
   { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], Componente: Facturas },
   { id: 'cierres', etiqueta: 'Cierre de caja', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Cierres },
   { id: 'registrar-produccion', etiqueta: 'Registrar producción', grupo: 'Fabricación', roles: ['produccion', 'admin', 'gerente'], Componente: RegistrarProduccion },
+  { id: 'trazabilidad', etiqueta: 'Trazabilidad de lotes', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], Componente: Trazabilidad },
   { id: 'reporte-produccion', etiqueta: 'Reporte de producción', grupo: 'Fabricación', roles: ['admin', 'gerente'], Componente: ReporteProduccion },
   { id: 'produccion', etiqueta: 'Órdenes y agenda', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], Componente: Fabricacion },
   { id: 'recetas', etiqueta: 'Recetas y costos', grupo: 'Fabricación', roles: ['admin', 'gerente'], Componente: Recetas },
@@ -164,6 +166,8 @@ function PantallaApp({ session, onSalir }) {
   const [sucursales, setSucursales] = useState([]);
   const [error, setError] = useState('');
   const [pantallaActiva, setPantallaActiva] = useState('pos');
+  // El QR de la etiqueta abre la app con ?lote=CÓDIGO: se muestra la trazabilidad de ese lote.
+  const [loteInicial, setLoteInicial] = useState(() => new URLSearchParams(window.location.search).get('lote'));
   const [filtroFacturas, setFiltroFacturas] = useState(null);
   // Sucursal en la que se está facturando ahora mismo — vive acá (no
   // dentro de cada pantalla) para que el color se pueda aplicar a toda la
@@ -198,6 +202,7 @@ function PantallaApp({ session, onSalir }) {
   // volver a escribirlo.
   function irA(id, payload) {
     if (id === 'facturas' && payload) setFiltroFacturas(payload);
+    if (id === 'trazabilidad' && payload?.lote) setLoteInicial(payload.lote);
     setPantallaActiva(id);
   }
 
@@ -235,6 +240,13 @@ function PantallaApp({ session, onSalir }) {
     if (perfil) registrarEvento('pantalla.ver', { pantalla: pantallaActiva }, sucursalActivaId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pantallaActiva, perfil?.id]);
+
+  useEffect(() => {
+    if (loteInicial && perfil && ['admin', 'gerente', 'bodega'].includes(perfil.rol)) {
+      setPantallaActiva('trazabilidad');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [perfil?.id]);
 
   // Contador de alertas antifraude sin revisar (sólo administradores).
   useEffect(() => {
@@ -428,6 +440,7 @@ function PantallaApp({ session, onSalir }) {
           sucursalId={sucursalActivaId}
           onCambiarSucursalId={setSucursalActivaId}
           onCarritoOcupado={setCarritoOcupado}
+          loteInicial={loteInicial}
         />
       </div>
       </main>

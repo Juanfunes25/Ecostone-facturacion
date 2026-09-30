@@ -73,6 +73,20 @@ export async function verPdf(path, session) {
   }
 }
 
+// Igual que verPdf pero con una ventana abierta antes (en el clic del usuario).
+export async function pdfEnVentana(ventana, path, session) {
+  try {
+    const blob = await (await pedir(path, session)).blob();
+    const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+    if (ventana) ventana.location.href = url;
+    else window.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+  } catch (e) {
+    ventana?.close();
+    throw e;
+  }
+}
+
 export async function descargarPdf(path, session, nombreArchivo) {
   const blob = await (await pedir(path, session)).blob();
   const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));

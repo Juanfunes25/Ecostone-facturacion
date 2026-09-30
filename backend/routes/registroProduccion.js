@@ -6,6 +6,7 @@ import { crearAlerta } from '../lib/alertas.js';
 import { crearOrdenProduccion, hoyHn } from '../lib/produccion.js';
 import { colarOrden, liberarCuradosVencidos } from '../lib/colada.js';
 import { round3 } from '../lib/cotizacion.js';
+import { buscarOrden, generarPdfEtiquetas, urlDeLote } from '../lib/trazabilidad.js';
 import { inicioDelDia } from '../lib/fechas.js';
 
 // Registro de producción desde el celular del operario: elige el modelo y la
@@ -52,7 +53,7 @@ registroProduccion.post('/', requireRole(...ROLES), async (req, res) => {
     if (sinReceta) avisos.push('Este modelo aún no tiene receta: se guardó la producción pero no se descontó materia prima. Avisa al administrador.');
     if (r.faltantes.length) avisos.push('El sistema tenía menos materia prima que la usada. Ya se avisó al administrador.');
     res.status(201).json({
-      lote: orden.lote, producto: producto.nombre, cantidad, unidad: unidadDe(producto),
+      orden_id: orden.id, lote: orden.lote, producto: producto.nombre, cantidad, unidad: unidadDe(producto),
       registrado_at: r.orden.fecha_colado, disponible_desde: r.orden.fecha_disponible,
       insumos: r.consumido, avisos,
     });
@@ -69,4 +70,21 @@ registroProduccion.get('/recientes', requireRole(...ROLES), async (req, res) => 
   const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data.map((o) => ({ id: o.id, lote: o.lote, producto: o.productos?.nombre, cantidad: Number(o.m2_planificado), unidad: o.productos?.unidad_venta === 'caja' ? 'cajas' : 'm²', estado: o.estado, registrado_at: o.fecha_colado, disponible_desde: o.fecha_disponible, operario: o.perfiles?.nombre })));
+});
+
+// Etiqueta del lote (se genera sola al registrar la producción). El operario solo ve las suyas.
+registroProduccion.get('/:id/etiqueta', requireRole(...ROLES), async (req, res) => {
+  try {
+    const orden = await buscarOrden({ id: req.params.id });
+    if (!orden || (req.perfil.rol === 'produccion' && orden.responsable_id !== req.perfil.id && orden.creada_por !== req.perfil.id)) return res.status(404).json({ error: 'Lote no encontrado' });
+    const modo = req.query.modo === 'cajas' ? 'cajas' : 'lote';
+    const pdf = await generarPdfEtiquetas(orden, { url: urlDeLote(req, orden.lote), modo });
+    await db.from('ordenes_produccion').update({ etiquetas_impresas: Number(orden.etiquetas_impresas ?? 0) + 1 }).eq('id', orden.id);
+    await registrarAuditoria(req, { accion: 'produccion.etiqueta', entidad: 'orden_produccion', entidadId: orden.id, detalle: { lote: orden.lote, modo } });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="etiqueta-${orden.lote}${modo === 'cajas' ? '-cajas' : ''}.pdf"`);
+    res.send(pdf);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });

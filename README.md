@@ -24,6 +24,7 @@ Cotización ─► (cliente acepta) Aprobada ─► Cobro (anticipo / pago) ─�
 | Cotizaciones | m² netos + desperdicio → cajas completas, accesorios sugeridos por rendimiento, flete, instalación, ISV incluido o separado según la lista, PDF de marca y correo |
 | Catálogo de piedra | Modelo + color, unidad de venta (m², caja, pieza, ml…), listas Público / Contratista / Distribuidor |
 | Registrar producción (celular) | Usuario `productor` (rol producción): elige modelo, color y cantidad, envía; se guarda fecha, hora y usuario, se descuenta la materia prima según la receta y el lote queda "en secado" y pasa solo a "lista para vender" (inventario) a los 5 días, o antes con el desplegable |
+| Trazabilidad de lotes | Cada producción genera sola su etiqueta (4×6") con lote, fecha, producto, cantidad, operario, molde, mezcla y QR; el QR abre la ficha del lote: insumos usados y su última compra, calidad, inventario, cotizaciones y facturas. Etiquetas por caja y reimpresión |
 | Reporte de producción | Panorama: producido por día/modelo/operario, en secado, lista para vender, merma, consumo real vs receta, insumos críticos, inventario, alertas y detalle de registros |
 | Producción | Órdenes con lote, colada, secado, paso a lista para vender con 1ª / 2ª / merma, calidad (ASTM C1670), MRP de compras, agenda, moldes |
 | Recetas y costos | Insumos por m², merma, mano de obra, indirectos → costo por m² y margen |

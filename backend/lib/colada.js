@@ -47,7 +47,7 @@ export async function colarOrden(req, orden, { reales = null, forzar = false } =
   }
 
   const dias = numero(params.dias_a_inventario, 5);
-  const { data: actualizada, error } = await db.from('ordenes_produccion').update({ estado: 'curando', fecha_colado: new Date().toISOString(), fecha_disponible: sumarDias(hoyHn(), dias), costo_mp: round2(costoMp), responsable_id: orden.responsable_id ?? req.perfil?.id ?? null }).eq('id', orden.id).select().single();
+  const { data: actualizada, error } = await db.from('ordenes_produccion').update({ estado: 'curando', fecha_colado: new Date().toISOString(), etiqueta_at: new Date().toISOString(), fecha_disponible: sumarDias(hoyHn(), dias), costo_mp: round2(costoMp), responsable_id: orden.responsable_id ?? req.perfil?.id ?? null }).eq('id', orden.id).select().single();
   if (error) throw new Error(error.message);
   if (orden.molde_id && orden.coladas) {
     const { data: m } = await db.from('moldes').select('usos').eq('id', orden.molde_id).single();
