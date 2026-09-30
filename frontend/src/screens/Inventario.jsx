@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import Modal, { Campo, Etiqueta, Kpis, Pestanas } from '../components/Modal.jsx';
 import { L, num, fechaCorta } from '../lib/fmt.js';
+import Icono from '../components/Icono.jsx';
 import { descargarCsv } from '../lib/csv.js';
-import { verPdf } from '../lib/documentos.js';
 
 const TIPO = { inicial: 'Existencia inicial', produccion: 'Lista para vender', reserva: 'Reserva', liberacion: 'Liberación', despacho: 'Despacho', venta: 'Venta', merma: 'Merma', ajuste: 'Ajuste' };
 const norm = (t) => String(t ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
@@ -15,6 +15,7 @@ export default function Inventario({ session, perfil }) {
   const [kardex, setKardex] = useState([]);
   const [modal, setModal] = useState(null);
   const [pestana, setPestana] = useState('stock');
+  const [menuFila, setMenuFila] = useState(null);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [f, setF] = useState({ q: '', modelo: '', color: '', pieza: '', soloExistencia: true, soloBajo: false, soloSecado: false });
@@ -121,13 +122,7 @@ export default function Inventario({ session, perfil }) {
                       <small style={{ display: 'block', color: 'var(--text-dim)' }}>
                         {p.lotes.length ? p.lotes.map((l) => `${l.lote}${l.calidad === 'segunda' ? ' (2ª)' : ''}: ${num(l.fisico, 1)} ${p.unidad}`).join(' · ') : 'sin existencias'}
                         {p.lotes_secado.length > 0 && <span style={{ color: 'var(--aviso)' }}> · secando: {p.lotes_secado.map((l) => `${l.lote} (lista el ${fechaCorta(l.lista_el)})`).join(', ')}</span>}
-                      </small>
-                      {escribe && [...new Set([...p.lotes.map((l) => l.lote), ...p.lotes_secado.map((l) => l.lote)])].filter((l) => /^EC-/.test(l)).map((lote) => (
-                        <span key={lote} style={{ display: 'inline-flex', gap: 4, marginRight: 8, marginTop: 4 }}>
-                          <button className="boton-sm boton-secundario" onClick={() => verPdf(`/trazabilidad/lote/${encodeURIComponent(lote)}/etiqueta`, session).catch((e) => setError(e.message))}>🏷 Etiqueta {lote}</button>
-                          <button className="boton-sm boton-secundario" title="Una etiqueta por caja" onClick={() => verPdf(`/trazabilidad/lote/${encodeURIComponent(lote)}/etiqueta?modo=cajas`, session).catch((e) => setError(e.message))}>por caja</button>
-                        </span>
-                      ))}</td>
+                      </small></td>
                     <td style={{ textAlign: 'right', color: p.en_secado ? 'var(--aviso)' : undefined }}>{p.en_secado ? `${num(p.en_secado, 2)} ${p.unidad}` : '—'}</td>
                     <td style={{ textAlign: 'right' }}>{num(p.fisico_primera, 2)}</td>
                     <td style={{ textAlign: 'right' }}>{num(p.reservado, 2)}</td>
@@ -136,10 +131,23 @@ export default function Inventario({ session, perfil }) {
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{p.unidad}</div>
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      {escribe && <button className="boton-sm boton-secundario" onClick={() => abrir('inicial', p)}>Existencia inicial</button>}{' '}
-                      {escribe && <button className="boton-sm boton-secundario" onClick={() => abrir('conteo', p, p.lotes[0])}>Conteo</button>}{' '}
-                      {escribe && <button className="boton-sm boton-secundario" onClick={() => abrir('ajuste', p, p.lotes[0])}>Ajuste</button>}
-                    </td>
+                      {escribe && (
+                        <div style={{ position: 'relative', display: 'inline-block' }}>
+                          <button className="boton-icono" aria-label="Acciones de inventario" title="Existencia, conteo y ajuste" onClick={() => setMenuFila(menuFila === p.id ? null : p.id)}>
+                            <Icono nombre="mas" tam={20} />
+                          </button>
+                          {menuFila === p.id && (
+                            <>
+                              <div style={{ position: 'fixed', inset: 0, zIndex: 30 }} onClick={() => setMenuFila(null)} />
+                              <div style={{ position: 'absolute', right: 0, top: '100%', zIndex: 31, minWidth: 190, display: 'grid', gap: 6, padding: 8, background: 'var(--surface, var(--navy))', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.35)' }}>
+                                <button className="boton-sm boton-secundario" onClick={() => { setMenuFila(null); abrir('inicial', p); }}>Existencia inicial</button>
+                                <button className="boton-sm boton-secundario" onClick={() => { setMenuFila(null); abrir('conteo', p, p.lotes[0]); }}>Conteo</button>
+                                <button className="boton-sm boton-secundario" onClick={() => { setMenuFila(null); abrir('ajuste', p, p.lotes[0]); }}>Ajuste</button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}</td>
                   </tr>
                 ))}
                 {visibles.length === 0 && (
