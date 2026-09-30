@@ -2,11 +2,12 @@
 // Un solo lugar para cambiarlos. Lo marcado [PENDIENTE] se confirma con Juan.
 export const EMPRESA = {
   marca: 'EcoStone',
-  razonSocial: 'Stone Factory', // [PENDIENTE] confirmar razón social completa (S. de R.L. / S.A.)
+  razonSocial: 'Stone Factory S.A.',
   rtn: '05019013557791',
   ciudad: 'San Pedro Sula, Honduras',
-  direccion: '[PENDIENTE] Dirección de la planta',
-  telefono: '[PENDIENTE]',
+  direccion: '7 Calle, 14 Ave S.O.',
+  telefono: '3191-2727',
+  correo: 'administracion@ecostone.com.hn',
   whatsapp: '[PENDIENTE]',
   instagram: '[PENDIENTE]',
   planta: { nombre: 'Planta EcoStone', direccion: '[PENDIENTE]' },

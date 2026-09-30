@@ -1,90 +1,124 @@
 import PDFDocument from 'pdfkit';
 import { PassThrough } from 'node:stream';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { montoEnLetras } from './numeroLetras.js';
 import { EMPRESA } from './empresa.js';
-import { etiquetaDescuento, etiquetaPorcentaje } from './ticket.js';
 
-// Factura completa tamaño carta, para descargar o enviar por correo.
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const LOGO = fileURLToPath(new URL('../assets/logo.png', import.meta.url));
+const lempiras = (n) => `L ${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fechaLarga = (iso) => {
+  const [a, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Tegucigalpa' }).format(new Date(iso)).split('-');
+  return `${Number(d)} de ${MESES[Number(m) - 1]} de ${a}`;
+};
+const fechaCorta = (f) => (f ? String(f).slice(0, 10).split('-').reverse().join('/') : '');
+
+// Factura grande tamaño carta (la que se entrega al cliente), en lempiras.
 export function generarPdfFactura(venta, res) {
-  const doc = new PDFDocument({ size: 'LETTER', margin: 50 });
+  const doc = new PDFDocument({ size: 'LETTER', margin: 40, info: { Title: `Factura ${venta.numero_factura ?? ''}`, Author: EMPRESA.razonSocial } });
   doc.pipe(res);
+  const izq = 40;
+  const der = 572;
+  const pe = venta.puntos_emision;
+  const borrador = !!pe?.es_borrador;
 
-  doc.fontSize(16).text(EMPRESA.razonSocial.toUpperCase(), { align: 'center' });
-  doc.fontSize(12).text(EMPRESA.marca, { align: 'center' });
-  doc.fontSize(9).text(`RTN: ${EMPRESA.rtn}`, { align: 'center' });
-  doc.fontSize(10).text(venta.sucursales?.nombre ?? '', { align: 'center' });
-  doc.moveDown();
+  // Logo (si existe backend/assets/logo.png) o nombre de marca en texto.
+  if (existsSync(LOGO)) doc.image(LOGO, izq, 34, { fit: [130, 70] });
+  else doc.font('Helvetica-Bold').fontSize(20).fillColor('#3f5433').text(EMPRESA.marca.toUpperCase(), izq, 48, { width: 150 }).fillColor('black');
 
-  const puntoEmision = venta.puntos_emision;
-  if (puntoEmision?.es_borrador) {
-    doc
-      .fillColor('red')
-      .fontSize(12)
-      .text('DOCUMENTO SIN VALIDEZ FISCAL — CAI pendiente de confirmar con el SAR', { align: 'center' })
-      .fillColor('black');
-  } else {
-    doc.fontSize(10).text(`CAI: ${puntoEmision?.cai ?? ''}`);
+  // Datos del emisor (centro)
+  doc.font('Helvetica-Bold').fontSize(13).text(EMPRESA.razonSocial.toUpperCase(), 190, 34, { width: 230, align: 'center' });
+  doc.font('Helvetica').fontSize(8);
+  doc.text(`${EMPRESA.direccion} ${EMPRESA.ciudad}`, 190, 52, { width: 230, align: 'center' });
+  doc.text(`Teléfono: ${EMPRESA.telefono}`, { width: 230, align: 'center' });
+  doc.text(`RTN: ${EMPRESA.rtn}`, { width: 230, align: 'center' });
+  doc.text(EMPRESA.correo, { width: 230, align: 'center' });
+  if (!borrador && pe?.cai) doc.text(`CAI: ${pe.cai}`, { width: 230, align: 'center' });
+
+  // Número, fecha y rango autorizado (derecha)
+  doc.font('Helvetica-Bold').fontSize(9).text('Número de Factura #', 430, 34, { width: 142 });
+  doc.fontSize(9.5).text(venta.numero_factura ?? '', { width: 142 });
+  doc.font('Helvetica').fontSize(8.5).text(`Fecha: ${fechaLarga(venta.fecha_emision)}`, 430, 66, { width: 142 });
+  if (!borrador && pe) {
+    const prefijo = `${pe.punto_emision_codigo}-${pe.punto_venta_codigo}-${pe.tipo_documento_codigo}-`;
+    const num8 = (n) => String(n).padStart(8, '0');
+    doc.fontSize(8);
+    if (pe.fecha_limite_emision) doc.text(`Fecha máxima de emisión: ${fechaCorta(pe.fecha_limite_emision)}`, 430, 82, { width: 142 });
+    doc.text(`Rango autorizado: ${prefijo}${num8(pe.correlativo_desde)} a ${num8(pe.correlativo_hasta)}`, 430, doc.y + 2, { width: 142 });
   }
 
-  doc.fontSize(10);
-  doc.text(`Factura No.: ${venta.numero_factura ?? ''}`);
-  doc.text(`Fecha de emisión: ${new Date(venta.fecha_emision).toLocaleString('es-HN')}`);
-  if (puntoEmision?.fecha_limite_emision) {
-    doc.text(`Fecha límite de emisión del rango: ${puntoEmision.fecha_limite_emision}`);
-  }
-  doc.moveDown();
-
-  doc.text(`Cliente: ${venta.clientes?.nombre || 'Consumidor Final'}`);
-  doc.text(`RTN: ${venta.clientes?.rtn || 'N/A'}`);
-  doc.text(`Cajero: ${venta.perfiles?.nombre ?? ''}`);
-  doc.moveDown();
-
-  const inicioTabla = doc.y;
-  doc.font('Helvetica-Bold');
-  doc.text('Producto', 50, inicioTabla, { width: 220 });
-  doc.text('Cant.', 270, inicioTabla, { width: 50, align: 'right' });
-  doc.text('Precio', 320, inicioTabla, { width: 80, align: 'right' });
-  doc.text('Monto', 400, inicioTabla, { width: 100, align: 'right' });
-  doc.font('Helvetica');
-  doc.moveDown();
-  doc.moveTo(50, doc.y).lineTo(500, doc.y).stroke();
-  doc.moveDown(0.5);
-
-  for (const item of venta.detalle ?? []) {
-    const y = doc.y;
-    doc.text(item.nombre_producto, 50, y, { width: 220 });
-    doc.text(String(item.cantidad), 270, y, { width: 50, align: 'right' });
-    doc.text(`L ${Number(item.precio_unitario).toFixed(2)}`, 320, y, { width: 80, align: 'right' });
-    const bruto = Number(item.cantidad) * Number(item.precio_unitario);
-    doc.text(`L ${bruto.toFixed(2)}`, 400, y, { width: 100, align: 'right' });
-    doc.moveDown();
-    if (Number(item.descuento) > 0) {
-      const yd = doc.y;
-      doc.fontSize(8.5).fillColor('#555');
-      doc.text(`   ${etiquetaPorcentaje(item.descuento_porcentaje)}`, 50, yd, { width: 300 });
-      doc.text(`-L ${Number(item.descuento).toFixed(2)}`, 400, yd, { width: 100, align: 'right' });
-      doc.fillColor('black').fontSize(10);
-      doc.moveDown(0.6);
-    }
+  let y = 128;
+  if (borrador) {
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('red').text('DOCUMENTO SIN VALIDEZ FISCAL — CAI pendiente de confirmar con el SAR', izq, y, { width: der - izq, align: 'center' }).fillColor('black');
+    y += 22;
   }
 
-  doc.moveTo(50, doc.y).lineTo(500, doc.y).stroke();
-  doc.moveDown();
+  // Cliente
+  doc.font('Helvetica').fontSize(9.5);
+  doc.text(`Nombre del Cliente: ${venta.clientes?.nombre || 'Consumidor Final'}`, izq, y, { width: der - izq });
+  doc.text(`Dirección del Cliente: ${venta.clientes?.direccion || '--------------------'}`, izq, doc.y + 4, { width: der - izq });
+  doc.text(`RTN del Cliente: ${venta.clientes?.rtn || '--------------------'}`, izq, doc.y + 4, { width: der - izq });
+  y = doc.y + 14;
 
-  const filaTotal = (etiqueta, monto) => {
-    const y = doc.y;
-    doc.text(etiqueta, 220, y, { width: 180, align: 'right' });
-    doc.text(`L ${Number(monto).toFixed(2)}`, 400, y, { width: 100, align: 'right' });
-    doc.moveDown();
+  // Tabla de productos
+  const colCant = { x: izq, w: 55 };
+  const colDesc = { x: izq + 65, w: 280 };
+  const colPrecio = { x: 400, w: 80 };
+  const colTotal = { x: 485, w: der - 485 };
+  const encabezado = () => {
+    doc.font('Helvetica-Bold').fontSize(10);
+    doc.text('Cantidad', colCant.x, y, { width: colCant.w });
+    doc.text('Descripción', colDesc.x, y, { width: colDesc.w });
+    doc.text('Precio', colPrecio.x, y, { width: colPrecio.w, align: 'right' });
+    doc.text('Total', colTotal.x, y, { width: colTotal.w, align: 'right' });
+    y += 16;
+    doc.moveTo(izq, y).lineTo(der, y).lineWidth(0.6).stroke();
+    y += 6;
+    doc.font('Helvetica').fontSize(9.5);
   };
+  encabezado();
 
-  if (Number(venta.descuento) > 0) filaTotal(`${etiquetaDescuento(venta)}:`, -Number(venta.descuento));
-  filaTotal('Exento:', venta.subtotal_exento);
-  filaTotal('Exonerado:', venta.subtotal_exonerado);
-  filaTotal('Gravado 15%:', venta.subtotal_gravado_15);
-  filaTotal('ISV 15%:', venta.isv_total);
-  doc.font('Helvetica-Bold');
-  filaTotal('TOTAL:', venta.total);
-  doc.font('Helvetica');
+  let descuentos = 0;
+  for (const item of venta.detalle ?? []) {
+    const tasa = Number(item.impuesto_tasa) || 0;
+    const sinIsv = (n) => (tasa > 0 ? Number(n) / (1 + tasa) : Number(n));
+    const precio = sinIsv(item.precio_unitario);
+    const total = precio * Number(item.cantidad);
+    descuentos += sinIsv(item.descuento || 0);
+    if (y > 650) { doc.addPage(); y = 50; encabezado(); }
+    const nombre = `${item.nombre_producto}${tasa > 0 ? ' (ISV - 15%)' : ''}`;
+    const alto = doc.heightOfString(nombre, { width: colDesc.w });
+    doc.text(String(Number(item.cantidad)), colCant.x, y, { width: colCant.w, align: 'center' });
+    doc.text(nombre, colDesc.x, y, { width: colDesc.w });
+    doc.text(lempiras(precio), colPrecio.x, y, { width: colPrecio.w, align: 'right' });
+    doc.text(lempiras(total), colTotal.x, y, { width: colTotal.w, align: 'right' });
+    y += Math.max(alto, 12) + 6;
+  }
+  doc.moveTo(izq, y).lineTo(der, y).lineWidth(0.6).stroke();
+  y += 14;
+
+  // Totales (a la derecha) y agradecimiento (a la izquierda)
+  if (y > 560) { doc.addPage(); y = 50; }
+  const yTotales = y;
+  doc.font('Helvetica').fontSize(8.5).text('Agradecemos su preferencia. Esperamos seguir colaborando con usted en el futuro.\nLa factura es beneficio de todos, exíjala.', izq, yTotales, { width: 230 });
+  const fila = (etiqueta, monto, negrita = false) => {
+    doc.font(negrita ? 'Helvetica-Bold' : 'Helvetica').fontSize(9.5);
+    doc.text(etiqueta, 300, y, { width: 175, align: 'right' });
+    doc.text(lempiras(monto), colTotal.x - 10, y, { width: colTotal.w + 10, align: 'right' });
+    y += 16;
+  };
+  fila('Total Venta Exento', venta.subtotal_exento);
+  fila('Total Venta Exonerada', venta.subtotal_exonerado);
+  fila('Total Venta ISV - 15%', venta.subtotal_gravado_15);
+  fila('ISV - 15%', venta.isv_total);
+  fila('Descuentos y Rebajas', descuentos);
+  y += 2;
+  fila('Total Número de Factura', venta.total, true);
+  doc.font('Helvetica').fontSize(8.5).text(montoEnLetras(venta.total), 300, y, { width: der - 300, align: 'right' });
+  if (venta.anulada) {
+    doc.font('Helvetica-Bold').fontSize(26).fillColor('red').text('ANULADA', izq, yTotales + 60, { width: 230, align: 'center' }).fillColor('black');
+  }
 
   doc.end();
 }
