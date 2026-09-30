@@ -56,19 +56,6 @@ export default function Facturas({ session, perfil, sucursales, filtroInicial, o
     if (formaFiltro) lista = lista.filter((f) => formasDePago(f).some((p) => p.nombre === formaFiltro));
     return lista;
   }, [facturas, cajeroFiltro, soloAnuladas, formaFiltro]);
-  const totalesPorForma = useMemo(() => {
-    const t = {};
-    for (const f of facturasVisibles) {
-      if (f.anulada) continue;
-      for (const p of formasDePago(f)) t[p.nombre] = (t[p.nombre] ?? 0) + p.monto;
-    }
-    return t;
-  }, [facturasVisibles]);
-  const totalVisible = useMemo(
-    () => facturasVisibles.reduce((s, f) => s + (f.anulada ? 0 : Number(f.total)), 0),
-    [facturasVisibles]
-  );
-
   function exportarCsv() {
     descargarCsv(
       `facturas-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -204,16 +191,6 @@ export default function Facturas({ session, perfil, sucursales, filtroInicial, o
             Se están mostrando los últimos 200 resultados — acota el rango de fechas o la sucursal para ver el resto.
           </div>
         )}
-
-        <p style={{ color: 'var(--text-dim)' }}>
-          {facturasVisibles.length} factura{facturasVisibles.length === 1 ? '' : 's'} · Total: L{' '}
-          {totalVisible.toFixed(2)}
-          {Object.entries(totalesPorForma).map(([nombre, monto]) => (
-            <span key={nombre} className={`chip-pago ${CLASE_FORMA[nombre] ?? ''}`} style={{ marginLeft: 8 }}>
-              {nombre} L {monto.toFixed(2)}
-            </span>
-          ))}
-        </p>
 
         <table className="tabla">
           <thead>
