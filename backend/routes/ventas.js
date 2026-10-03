@@ -79,6 +79,11 @@ function validarPorcentaje(valor) {
   return porcentaje;
 }
 
+// El catálogo de DISERCO guarda el precio SIN ISV; el mostrador cobra con ISV incluido.
+export function precioConIsv(producto) {
+  return producto.empresa === 'diserco' ? round2(Number(producto.precio) * (1 + Number(producto.impuesto1_tasa ?? 0.15))) : producto.precio;
+}
+
 // porcentajeGeneral: compatibilidad con cajas que aún mandan un solo
 // descuento para toda la orden (versión anterior de la app).
 async function construirItems(itemsSolicitados, puedeEditarPrecio, porcentajeGeneral = 0) {
@@ -97,7 +102,7 @@ async function construirItems(itemsSolicitados, puedeEditarPrecio, porcentajeGen
     }
     if (!Number.isInteger(cantidad)) throw new Error(`La cantidad de ${producto.nombre} debe ser un número entero (no se vende media unidad)`);
     const precio_unitario =
-      puedeEditarPrecio && item.precio_unitario !== undefined ? Number(item.precio_unitario) : producto.precio;
+      puedeEditarPrecio && item.precio_unitario !== undefined ? Number(item.precio_unitario) : precioConIsv(producto);
     if (!Number.isFinite(Number(precio_unitario)) || Number(precio_unitario) < 0) {
       throw new Error(`Precio inválido para ${producto.nombre}`);
     }

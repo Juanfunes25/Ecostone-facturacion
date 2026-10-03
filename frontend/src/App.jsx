@@ -103,7 +103,7 @@ const PANTALLAS = [
   { id: 'd-catalogo', etiqueta: 'Productos', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: CatalogoD },
   { id: 'd-inventario', etiqueta: 'Inventario', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: InventarioD },
   { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], empresas: ['ecostone'], Componente: Cotizaciones },
-  { id: 'pos', etiqueta: 'Venta Directa', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], empresas: ['ecostone'], Componente: Pos },
+  { id: 'pos', etiqueta: 'Venta Directa', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], empresas: ['diserco', 'ecostone'], Componente: Pos },
   { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], empresas: ['diserco', 'ecostone'], Componente: Facturas },
   { id: 'cierres', etiqueta: 'Cierre de caja', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], empresas: ['diserco', 'ecostone'], Componente: Cierres },
   { id: 'registrar-produccion', etiqueta: 'Registrar producción', grupo: 'Fabricación', roles: ['produccion', 'admin', 'gerente'], empresas: ['ecostone'], Componente: RegistrarProduccion },

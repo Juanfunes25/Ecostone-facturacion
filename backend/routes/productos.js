@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { registrarAuditoria } from '../lib/auditoria.js';
 import { crearAlerta } from '../lib/alertas.js';
+import { precioConIsv } from './ventas.js';
 
 export const productos = Router();
 
@@ -40,7 +41,7 @@ productos.get('/', async (req, res) => {
   if (req.query.incluirInactivos !== 'true') query = query.eq('activo', true);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  res.json(req.empresa === 'diserco' ? data.map((p) => ({ ...p, precio_sin_isv: p.precio, precio: precioConIsv(p) })) : data);
 });
 
 productos.post('/', requireRole('admin', 'gerente'), async (req, res) => {
