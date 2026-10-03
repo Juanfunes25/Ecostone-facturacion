@@ -18,7 +18,7 @@ clientes.get('/', async (req, res) => {
       `nombre.ilike.%${busqueda}%,rtn.ilike.%${busqueda}%,telefono.ilike.%${busqueda}%,email.ilike.%${busqueda}%`
     );
   }
-  const { data, error } = await query.limit(req.query.todos ? 2000 : 50);
+  const { data, error } = await query.limit(req.query.todos || !busqueda ? 2000 : 50);
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
