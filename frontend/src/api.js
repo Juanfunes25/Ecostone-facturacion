@@ -1,7 +1,9 @@
 import { idDispositivo } from './lib/dispositivo.js';
 import { empresaActiva } from './lib/empresa.js';
 
-async function llamar(method, path, session, body) {
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function llamar(method, path, session, body, intento = 0) {
   let res;
   try {
     res = await fetch(`/api${path}`, {
@@ -19,8 +21,15 @@ async function llamar(method, path, session, body) {
     // llegar a responder — sin esto se veía "Failed to fetch" en inglés.
     throw new Error('Sin conexión con el servidor. Revisa el internet e intenta de nuevo.');
   }
+  // 502/503/504: el servidor se está reiniciando o despertando. Las consultas (GET) se reintentan solas.
+  if ([502, 503, 504].includes(res.status) && method === 'GET' && intento < 3) {
+    await esperar(1500 * (intento + 1));
+    return llamar(method, path, session, body, intento + 1);
+  }
   const texto = await res.text();
-  const datos = texto ? JSON.parse(texto) : null;
+  let datos = null;
+  try { datos = texto ? JSON.parse(texto) : null; } catch { /* respuesta que no es JSON (página de error del servidor) */ }
+  if (!res.ok && datos === null && [502, 503, 504].includes(res.status)) throw new Error('El servidor se está reiniciando o despertando. Espera unos segundos y vuelve a intentar.');
   if (!res.ok) {
     const e = new Error(datos?.error || `Error ${res.status}`);
     e.codigo = datos?.codigo;

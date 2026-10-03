@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import 'express-async-errors'; // un error dentro de una ruta responde 500 en vez de tumbar el servidor
 import cors from 'cors';
 import compression from 'compression';
 import path from 'node:path';
@@ -36,6 +37,10 @@ import { disercoSalidas } from './routes/disercoSalidas.js';
 import { requireRole } from './middleware/requireRole.js';
 import { registrarAuditoria } from './lib/auditoria.js';
 import { iniciarVigilancia, registrarLoginFallido } from './lib/antifraude.js';
+
+// Un fallo inesperado se registra, pero el servidor no se cae (una caída = Error 502 para todos).
+process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
+process.on('uncaughtException', (e) => console.error('[uncaughtException]', e));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();

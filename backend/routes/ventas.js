@@ -320,7 +320,7 @@ ventas.get('/', async (req, res) => {
   if (q) {
     // Además del No. de factura, busca por nombre del cliente — así no hay
     // que saber el número exacto para encontrar las facturas de alguien.
-    const { data: clientesQueCoinciden } = await db.from('clientes').select('id').ilike('nombre', `%${q}%`);
+    const { data: clientesQueCoinciden } = await db.from('clientes').select('id').ilike('nombre', `%${q}%`).limit(80);
     const idsCliente = (clientesQueCoinciden ?? []).map((c) => c.id);
     const filtroCliente = idsCliente.length > 0 ? `,cliente_id.in.(${idsCliente.join(',')})` : '';
     query = query.or(`numero_factura.ilike.%${q}%${filtroCliente}`);
