@@ -97,21 +97,25 @@ async function demandaGeneral(ventaId) {
   return mapa;
 }
 
-async function verificarGeneral(venta) {
+// Faltantes de inventario general: [{ producto, pedido, hay }]. No bloquea por sí solo.
+async function faltantesGeneral(venta) {
   const demanda = await demandaGeneral(venta.id);
-  if (!demanda.size) return;
+  if (!demanda.size) return [];
   const { data: stock } = await db.from('inv_stock').select('producto_id, existencia').in('producto_id', [...demanda.keys()]);
   const hay = new Map((stock ?? []).map((x) => [x.producto_id, Number(x.existencia)]));
+  const faltantes = [];
   for (const [id, { nombre, cantidad }] of demanda) {
     const existencia = hay.get(id) ?? 0;
-    if (existencia + 1e-9 < cantidad) throw Object.assign(new Error(`No hay suficiente inventario de ${nombre}: se facturan ${cantidad} y hay ${Math.floor(existencia)}. Registra la compra o ajusta el inventario antes de facturar.`), { status: 409 });
+    if (existencia + 1e-9 < cantidad) faltantes.push({ producto: nombre, pedido: cantidad, hay: Math.max(0, Math.floor(existencia)) });
   }
+  return faltantes;
 }
 
 async function descontarGeneral(req, venta, numeroFactura) {
   const demanda = await demandaGeneral(venta.id);
   for (const [id, { cantidad }] of demanda) {
-    const { error } = await db.rpc('inv_registrar', { p_producto: id, p_tipo: 'venta', p_cantidad: -cantidad, p_costo: 0, p_motivo: `Factura ${numeroFactura}`, p_venta: venta.id, p_proveedor: null, p_referencia: null, p_usuario: req.perfil?.id ?? null });
+    // forzar: el faltante ya se avisó y se confirmó antes de emitir la factura.
+    const { error } = await db.rpc('inv_mover', { p_producto: id, p_tipo: 'venta', p_cantidad: -cantidad, p_costo: 0, p_motivo: `Factura ${numeroFactura}`, p_venta: venta.id, p_proveedor: null, p_referencia: null, p_usuario: req.perfil?.id ?? null, p_forzar: true, p_salida: null });
     if (error) throw new Error(error.message);
   }
   return demanda.size;
@@ -120,15 +124,22 @@ async function descontarGeneral(req, venta, numeroFactura) {
 async function reponerGeneral(req, venta) {
   const { data } = await db.from('inv_movimientos').select('producto_id, cantidad').eq('venta_id', venta.id).eq('tipo', 'venta');
   for (const m of data ?? []) {
-    const { error } = await db.rpc('inv_registrar', { p_producto: m.producto_id, p_tipo: 'devolucion', p_cantidad: -Number(m.cantidad), p_costo: 0, p_motivo: `Anulación de factura ${venta.numero_factura}`, p_venta: venta.id, p_proveedor: null, p_referencia: null, p_usuario: req.perfil?.id ?? null });
+    const { error } = await db.rpc('inv_mover', { p_producto: m.producto_id, p_tipo: 'devolucion', p_cantidad: -Number(m.cantidad), p_costo: 0, p_motivo: `Anulación de factura ${venta.numero_factura}`, p_venta: venta.id, p_proveedor: null, p_referencia: null, p_usuario: req.perfil?.id ?? null, p_forzar: true, p_salida: null });
     if (error) throw new Error(error.message);
   }
   return (data ?? []).length;
 }
 
-export async function verificarInventarioVenta(venta) {
+// Antes de emitir: la piedra debe existir (bloquea). Los productos de DISERCO sí
+// se pueden facturar sin existencia, pero solo si el cajero lo confirma.
+export async function verificarInventarioVenta(venta, { confirmarSinStock = false } = {}) {
   await verificarPiedra(venta);
-  await verificarGeneral(venta);
+  const faltantes = await faltantesGeneral(venta);
+  if (faltantes.length && !confirmarSinStock) {
+    const detalle = faltantes.map((f) => `${f.producto} (pides ${f.pedido}, hay ${f.hay})`).join('; ');
+    throw Object.assign(new Error(`Sin existencia suficiente: ${detalle}`), { status: 409, codigo: 'SIN_STOCK', faltantes });
+  }
+  return faltantes;
 }
 export async function descontarInventarioVenta(req, venta, numeroFactura) {
   const a = await descontarPiedra(req, venta, numeroFactura);

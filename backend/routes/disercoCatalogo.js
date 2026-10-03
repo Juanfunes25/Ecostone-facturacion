@@ -16,7 +16,19 @@ async function conExistencia(productos) {
   if (!productos.length) return [];
   const { data } = await db.from('inv_stock').select('producto_id, existencia').in('producto_id', productos.map((p) => p.id));
   const hay = new Map((data ?? []).map((s) => [s.producto_id, Number(s.existencia)]));
-  return productos.map((p) => ({ ...p, existencia: hay.get(p.id) ?? 0, bajo_minimo: p.controla_inventario && Number(p.stock_minimo) > 0 && (hay.get(p.id) ?? 0) <= Number(p.stock_minimo) }));
+  // Material que está fuera, en proyectos abiertos.
+  const { data: fuera } = await db.from('d_salida_items').select('producto_id, cantidad_salida, cantidad_retorno, salida:d_salidas!inner(id, proyecto, responsable, estado)').eq('salida.estado', 'abierta').in('producto_id', productos.map((p) => p.id));
+  const enProyecto = new Map();
+  for (const f of fuera ?? []) {
+    const pend = Number(f.cantidad_salida) - Number(f.cantidad_retorno);
+    if (pend <= 0) continue;
+    enProyecto.set(f.producto_id, [...(enProyecto.get(f.producto_id) ?? []), { salida_id: f.salida.id, proyecto: f.salida.proyecto, responsable: f.salida.responsable, cantidad: pend }]);
+  }
+  return productos.map((p) => {
+    const proyectos = enProyecto.get(p.id) ?? [];
+    const en_proyectos = proyectos.reduce((s, x) => s + x.cantidad, 0);
+    return { ...p, existencia: hay.get(p.id) ?? 0, en_proyectos, proyectos, total: (hay.get(p.id) ?? 0) + en_proyectos, bajo_minimo: p.controla_inventario && Number(p.stock_minimo) > 0 && (hay.get(p.id) ?? 0) <= Number(p.stock_minimo) };
+  });
 }
 
 disercoCatalogo.get('/productos', requireRole(...LEE), async (req, res) => {
@@ -96,7 +108,7 @@ disercoCatalogo.post('/inventario/movimiento', requireRole(...MUEVE), async (req
     const { data: prod } = await db.from('productos').select('id, nombre, controla_inventario').eq('id', producto_id).eq('empresa', 'diserco').maybeSingle();
     if (!prod) throw err('Producto no encontrado', 404);
     if (!prod.controla_inventario) throw err('Este producto no controla inventario');
-    const { data, error } = await db.rpc('inv_registrar', { p_producto: producto_id, p_tipo: tipo, p_cantidad: cantidad, p_costo: tipo === 'ajuste' ? 0 : costo, p_motivo: motivo || (tipo === 'compra' ? 'Compra' : 'Existencia inicial'), p_venta: null, p_proveedor: String(req.body.proveedor ?? '').trim() || null, p_referencia: String(req.body.referencia ?? '').trim() || null, p_usuario: req.perfil.id });
+    const { data, error } = await db.rpc('inv_mover', { p_producto: producto_id, p_tipo: tipo, p_cantidad: cantidad, p_costo: tipo === 'ajuste' ? 0 : costo, p_motivo: motivo || (tipo === 'compra' ? 'Compra' : 'Existencia inicial'), p_venta: null, p_proveedor: String(req.body.proveedor ?? '').trim() || null, p_referencia: String(req.body.referencia ?? '').trim() || null, p_usuario: req.perfil.id, p_forzar: false, p_salida: null });
     if (error) throw err(error.message);
     await registrarAuditoria(req, { accion: `inventario.${tipo}`, entidad: 'producto', entidadId: producto_id, detalle: { producto: prod.nombre, cantidad, costo, motivo, empresa: 'diserco' } });
     res.status(201).json(data);

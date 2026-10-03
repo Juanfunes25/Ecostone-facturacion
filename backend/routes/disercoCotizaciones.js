@@ -18,7 +18,7 @@ const COBRA = ['admin', 'gerente', 'cajero', 'ventas'];
 const LEE = ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'];
 const GERENCIA = ['admin', 'gerente'];
 const TASA = 0.15;
-const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ error: e.message ?? String(e) });
+const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ error: e.message ?? String(e), codigo: e.codigo, faltantes: e.faltantes });
 const err = (msg, status = 400) => Object.assign(new Error(msg), { status });
 
 const SEL_COT = '*, clientes(nombre, rtn, email, telefono, exento_impuestos), vendedor:perfiles!d_cotizaciones_vendedor_id_fkey(nombre)';
@@ -286,7 +286,7 @@ disercoCotizaciones.post('/:id/cobros', requireRole(...COBRA), async (req, res) 
     await guardarDetalle(venta.id, lineasVenta);
 
     const efectivo = forma.nombre === 'Efectivo' ? monto : 0;
-    const factura = await facturarVenta(req, venta.id, { pagos: [{ forma_pago_id: forma.id, monto }], efectivo_recibido: efectivo, origen: 'diserco' });
+    const factura = await facturarVenta(req, venta.id, { pagos: [{ forma_pago_id: forma.id, monto }], efectivo_recibido: efectivo, origen: 'diserco', confirmar_sin_stock: !!req.body.confirmar_sin_stock });
 
     const { error: errPago } = await db.from('d_cotizacion_pagos').insert({ cotizacion_id: cot.id, concepto, forma_pago_id: forma.id, monto, referencia: req.body.referencia || null, venta_id: venta.id, usuario_id: req.perfil.id });
     if (errPago) console.error('d_cotizacion_pagos', cot.id, errPago.message);

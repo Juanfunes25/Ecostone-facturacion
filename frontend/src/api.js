@@ -21,7 +21,12 @@ async function llamar(method, path, session, body) {
   }
   const texto = await res.text();
   const datos = texto ? JSON.parse(texto) : null;
-  if (!res.ok) throw new Error(datos?.error || `Error ${res.status}`);
+  if (!res.ok) {
+    const e = new Error(datos?.error || `Error ${res.status}`);
+    e.codigo = datos?.codigo;
+    e.faltantes = datos?.faltantes;
+    throw e;
+  }
   return datos;
 }
 

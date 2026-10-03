@@ -32,6 +32,7 @@ import { iniciarLiberacionAutomatica } from './lib/colada.js';
 import { antifraude } from './routes/antifraude.js';
 import { disercoCotizaciones } from './routes/disercoCotizaciones.js';
 import { disercoCatalogo } from './routes/disercoCatalogo.js';
+import { disercoSalidas } from './routes/disercoSalidas.js';
 import { requireRole } from './middleware/requireRole.js';
 import { registrarAuditoria } from './lib/auditoria.js';
 import { iniciarVigilancia, registrarLoginFallido } from './lib/antifraude.js';
@@ -124,6 +125,7 @@ app.use('/api/diserco', (req, res, next) => {
   next();
 });
 app.use('/api/diserco/cotizaciones', disercoCotizaciones);
+app.use('/api/diserco/salidas', disercoSalidas);
 app.use('/api/diserco', disercoCatalogo);
 
 // Sirve el build del frontend (un solo servicio Render, backend + frontend estático).

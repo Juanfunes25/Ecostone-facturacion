@@ -4,6 +4,7 @@ import { Campo, Etiqueta } from '../components/Modal.jsx';
 import CotizacionDEditor from './CotizacionDEditor.jsx';
 import { L, num, fechaCorta } from '../lib/fmt.js';
 import { imprimirTicket, verPdf } from '../lib/documentos.js';
+import AvisoSinStock from '../components/AvisoSinStock.jsx';
 
 const ESTADOS = [['', 'Todas'], ['borrador,enviada', 'Por aprobar'], ['aprobada', 'Aprobadas (por cobrar)'], ['facturada', 'Cobradas y facturadas'], ['rechazada,anulada', 'Cerradas']];
 const TONO = { borrador: 'gris', enviada: 'info', aprobada: 'aviso', facturada: 'ok', rechazada: 'peligro', anulada: 'peligro', vencida: 'peligro' };
@@ -81,6 +82,8 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
   const [pago, setPago] = useState({ forma_pago_id: '', monto: '', referencia: '', concepto: '' });
   const [error, setError] = useState('');
   const [ocupado, setOcupado] = useState(false);
+  const [avisoStock, setAvisoStock] = useState(null);
+  const [salidas, setSalidas] = useState([]);
   const gerencia = ['admin', 'gerente'].includes(perfil.rol);
   const vende = ['admin', 'gerente', 'vendedor', 'ventas'].includes(perfil.rol);
   const cobra = ['admin', 'gerente', 'cajero', 'ventas'].includes(perfil.rol);
@@ -89,6 +92,7 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
     const [d, f] = await Promise.all([api.get(`/diserco/cotizaciones/${id}`, session), api.cache('/formas-pago', session)]);
     setC(d);
     setFormas(f);
+    if (d.tipo === 'proyecto') api.get(`/diserco/salidas?cotizacion_id=${d.id}`, session).then(setSalidas).catch(() => {});
     setPago((p) => ({ ...p, forma_pago_id: p.forma_pago_id || f.find((x) => x.nombre === 'Efectivo')?.id || f[0]?.id, monto: d.pendiente > 0 ? String(d.pendiente) : '', concepto: '' }));
   }
   useEffect(() => { cargar().catch((e) => setError(e.message)); }, [id]);
@@ -109,6 +113,22 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
     }
   }
 
+  async function cobrar(confirmar) {
+    setError('');
+    setOcupado(true);
+    try {
+      const r = await api.post(`/diserco/cotizaciones/${c.id}/cobros`, session, { ...pago, monto: Number(pago.monto), confirmar_sin_stock: confirmar });
+      onAviso(`Pago registrado y factura ${r.factura.numero_factura} emitida.${r.factura.aviso_rtn ? ` ⚠ ${r.factura.aviso_rtn}` : ''}`);
+      await cargar();
+      try { await imprimirTicket(r.factura.id, session); } catch { /* la impresión no bloquea */ }
+    } catch (e) {
+      if (e.codigo === 'SIN_STOCK') setAvisoStock(e.faltantes ?? []);
+      else setError(e.message);
+    } finally {
+      setOcupado(false);
+    }
+  }
+
   if (!c) return <div className="panel">{error ? <div className="error">{error}</div> : 'Cargando…'}</div>;
   const abierta = ['borrador', 'enviada'].includes(c.estado);
   const esProyecto = c.tipo === 'proyecto';
@@ -118,6 +138,7 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
 
   return (
     <div>
+      {avisoStock && <AvisoSinStock faltantes={avisoStock} onCancelar={() => setAvisoStock(null)} onContinuar={() => { setAvisoStock(null); cobrar(true); }} />}
       {error && <div className="error" onClick={() => setError('')}>{error}</div>}
       {aviso && <div className="aviso-ok" onClick={() => onAviso('')}>{aviso}</div>}
       <div className="panel">
@@ -162,6 +183,25 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
         </div>
       </div>
 
+      {esProyecto && salidas.length > 0 && (
+        <div className="panel">
+          <h2>Material enviado al proyecto</h2>
+          <table className="tabla">
+            <tbody>
+              {salidas.map((s) => (
+                <tr key={s.id}>
+                  <td>Salida #{s.numero} · {fechaCorta(s.created_at)} · {s.responsable}</td>
+                  <td>{s.items.map((i) => `${num(i.pendiente, 0)} × ${i.productos?.nombre}`).join(', ')}</td>
+                  <td><Etiqueta tono={s.estado === 'abierta' ? 'aviso' : 'gris'}>{s.estado === 'abierta' ? 'en curso' : 'cerrada'}</Etiqueta></td>
+                  <td style={{ textAlign: 'right' }}>{L(s.costo_total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {(() => { const costo = salidas.reduce((t, s) => t + s.costo_total, 0); return <p><strong>Costo del material: {L(costo)}</strong>{gerencia && <> · margen sobre material: {L(Number(c.subtotal) - costo)} ({num(Number(c.subtotal) > 0 ? ((Number(c.subtotal) - costo) / Number(c.subtotal)) * 100 : 0, 1)}%) <small style={{ color: 'var(--text-dim)' }}>sin mano de obra</small></>}</p>; })()}
+        </div>
+      )}
+
       {['aprobada', 'facturada'].includes(c.estado) && (
         <div className="panel">
           <h2>Cobros y facturas</h2>
@@ -198,10 +238,7 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
               <Campo etiqueta="Monto" ancho={150} ayuda={!esProyecto ? 'Productos: se cobra completo' : undefined}><input type="number" step="0.01" value={pago.monto} readOnly={!esProyecto} onChange={(e) => setPago({ ...pago, monto: e.target.value })} /></Campo>
               <Campo etiqueta="Referencia (voucher / transferencia)"><input value={pago.referencia} onChange={(e) => setPago({ ...pago, referencia: e.target.value })} /></Campo>
               {esProyecto && <Campo etiqueta="Concepto en la factura (opcional)" ancho={220}><input value={pago.concepto} placeholder={pagaTodo ? 'Saldo final / Pago total' : 'Anticipo 50%'} onChange={(e) => setPago({ ...pago, concepto: e.target.value })} /></Campo>}
-              <button className="boton" style={{ width: '100%', padding: '18px 20px', fontSize: '1.3rem', fontWeight: 800, minHeight: 64 }} disabled={ocupado || !(Number(pago.monto) > 0)} onClick={async () => {
-                const r = await hacer(() => api.post(`/diserco/cotizaciones/${c.id}/cobros`, session, { ...pago, monto: Number(pago.monto) }), (x) => `Pago registrado y factura ${x.factura.numero_factura} emitida.${x.factura.aviso_rtn ? ` ⚠ ${x.factura.aviso_rtn}` : ''}`);
-                if (r) { try { await imprimirTicket(r.factura.id, session); } catch { /* la impresión no bloquea */ } }
-              }}>
+              <button className="boton" style={{ width: '100%', padding: '18px 20px', fontSize: '1.3rem', fontWeight: 800, minHeight: 64 }} disabled={ocupado || !(Number(pago.monto) > 0)} onClick={() => cobrar(false)}>
                 {ocupado ? 'Procesando…' : `🧾 REGISTRAR PAGO Y GENERAR FACTURA · ${L(Number(pago.monto) || 0)}${esProyecto && !pagaTodo ? ' (parcial)' : ''}`}
               </button>
             </div>

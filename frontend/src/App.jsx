@@ -5,6 +5,7 @@ import { colorSucursal, nombreCortoSucursal, registrarColoresSucursales } from '
 const SelectorEmpresa = lazy(() => import('./screens/SelectorEmpresa.jsx'));
 const CotizacionesD = lazy(() => import('./screens/CotizacionesD.jsx'));
 const CatalogoD = lazy(() => import('./screens/CatalogoD.jsx'));
+const SalidasD = lazy(() => import('./screens/SalidasD.jsx'));
 const InventarioD = lazy(() => import('./screens/InventarioD.jsx'));
 const Pos = lazy(() => import('./screens/Pos.jsx'));
 const Facturas = lazy(() => import('./screens/Facturas.jsx'));
@@ -100,6 +101,7 @@ function PantallaLogin({ onEntrar }) {
 
 const PANTALLAS = [
   { id: 'd-cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], empresas: ['diserco'], Componente: CotizacionesD },
+  { id: 'd-salidas', etiqueta: 'Salidas a proyecto', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: SalidasD },
   { id: 'd-catalogo', etiqueta: 'Productos', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: CatalogoD },
   { id: 'd-inventario', etiqueta: 'Inventario', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: InventarioD },
   { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], empresas: ['ecostone'], Componente: Cotizaciones },

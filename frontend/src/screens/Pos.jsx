@@ -5,6 +5,7 @@ import { registrarEvento } from '../lib/eventos.js';
 import { colorSucursal, nombreCortoSucursal } from '../lib/coloresSucursal.js';
 import { imprimirTicket, leerConfigImpresora, pedirMotivo, verPdf } from '../lib/documentos.js';
 import { useCambiosEnVivo } from '../lib/tiempoReal.js';
+import AvisoSinStock from '../components/AvisoSinStock.jsx';
 
 const CONSUMIDOR_FINAL_NOMBRE = 'Consumidor Final';
 const UMBRAL_RTN_OBLIGATORIO = 10000;
@@ -296,6 +297,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
   const [ventaId, setVentaId] = useState(null);
   const [mostrarPago, setMostrarPago] = useState(false);
   const [guardandoPago, setGuardandoPago] = useState(false);
+  const [avisoStock, setAvisoStock] = useState(null);
   const [mostrarOrdenes, setMostrarOrdenes] = useState(false);
   const [cargandoOrdenes, setCargandoOrdenes] = useState(false);
   const [ordenesAbiertas, setOrdenesAbiertas] = useState([]);
@@ -701,7 +703,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
     }
   }
 
-  async function confirmarPago({ pagos, efectivo }) {
+  async function confirmarPago({ pagos, efectivo }, confirmarSinStock = false) {
     setGuardandoPago(true);
     setError('');
     try {
@@ -718,6 +720,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
       const venta = await api.post(`/ventas/${idParaPagar}/pagar`, session, {
         efectivo_recibido: efectivo,
         pagos: pagosConId,
+        confirmar_sin_stock: confirmarSinStock,
       });
       ultimaVentaRef.current = { cliente, carrito };
       setResultadoFactura(venta);
@@ -730,7 +733,8 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
 
       if (leerConfigImpresora().autoImprimir) imprimir(venta.id);
     } catch (e) {
-      setError(e.message);
+      if (e.codigo === 'SIN_STOCK') setAvisoStock({ faltantes: e.faltantes ?? [], datos: { pagos, efectivo } });
+      else setError(e.message);
     } finally {
       setGuardandoPago(false);
     }
@@ -741,6 +745,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
   return (
     <div className="pos-grid">
       {toast && <div className="pos-toast">{toast}</div>}
+      {avisoStock && <AvisoSinStock faltantes={avisoStock.faltantes} onCancelar={() => setAvisoStock(null)} onContinuar={() => { const d = avisoStock.datos; setAvisoStock(null); confirmarPago(d, true); }} />}
 
       {resultadoFactura && (
         <div className="overlay">
@@ -755,6 +760,7 @@ export default function Pos({ session, perfil, sucursales, onIrA, sucursalId, on
             <p style={{ marginTop: -6 }}>Cliente: {resultadoFactura.cliente_nombre || CONSUMIDOR_FINAL_NOMBRE}</p>
             <p>Cambio: {fmtL(resultadoFactura.cambio ?? 0)}</p>
             {resultadoFactura.aviso_rtn && <div className="alerta">{resultadoFactura.aviso_rtn}</div>}
+            {resultadoFactura.faltantes_inventario?.length > 0 && <div className="alerta">Se facturó sin existencia suficiente: {resultadoFactura.faltantes_inventario.map((f) => f.producto).join(', ')}. Revisa el inventario.</div>}
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="boton-secundario boton-sm" style={{ flex: 1 }} onClick={() => imprimir(resultadoFactura.id, { reimpresion: true })}>
                 🖨 Reimprimir ticket

@@ -433,7 +433,7 @@ ventas.delete('/:id', async (req, res) => {
 // Emite la factura de una venta: correlativo del CAI (atómico), pagos,
 // bitácora y correo. Lo usan el POS (/pagar) y la conversión de una
 // cotización de evento en factura.
-export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, origen = 'pos' }) {
+export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, origen = 'pos', confirmar_sin_stock = false }) {
   if (!Array.isArray(pagos) || pagos.length === 0) {
     throw Object.assign(new Error('Debe indicar al menos una forma de pago'), { status: 400 });
   }
@@ -472,7 +472,7 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
   const cambio = round2(totalPagado - Number(venta.total));
 
   // La piedra debe existir en inventario antes de gastar un correlativo.
-  await verificarInventarioVenta(venta);
+  const faltantes = await verificarInventarioVenta(venta, { confirmarSinStock: !!confirmar_sin_stock });
 
   const { data: ventaFinal, error: errFinalizar } = await db.rpc('finalizar_venta', {
     p_venta_id: venta.id,
@@ -487,6 +487,10 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
   } catch (e) {
     console.error('descontar inventario', venta.id, e.message);
     crearAlerta(req, { tipo: 'inventario.descuento_fallido', severidad: 'alta', titulo: `Factura ${ventaFinal.numero_factura}: no se pudo descontar el inventario (${e.message})`, sucursalId: venta.sucursal_id, entidad: 'venta', entidadId: venta.id, detalle: { factura: ventaFinal.numero_factura, error: e.message } }).catch(() => {});
+  }
+
+  if (faltantes.length) {
+    crearAlerta(req, { tipo: 'inventario.venta_sin_stock', severidad: 'media', titulo: `Factura ${ventaFinal.numero_factura} emitida sin existencia suficiente (${req.perfil?.nombre ?? ''})`, sucursalId: venta.sucursal_id, entidad: 'venta', entidadId: venta.id, detalle: { factura: ventaFinal.numero_factura, faltantes: faltantes.map((f) => `${f.producto}: pidió ${f.pedido}, había ${f.hay}`).join(' · ') } }).catch(() => {});
   }
 
   const filasPago = pagos.map((p) => ({ venta_id: venta.id, forma_pago_id: p.forma_pago_id, monto: round2(Number(p.monto)) }));
@@ -576,6 +580,7 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
     ...ventaFinal,
     cliente_nombre: venta.clientes?.nombre ?? 'Consumidor Final',
     es_borrador: puntoEmision?.es_borrador ?? true,
+    faltantes_inventario: faltantes,
     aviso_rtn: sinRtnAlto ? `Recordatorio: esta factura pasa de L ${UMBRAL_RTN_OBLIGATORIO.toLocaleString('es-HN')} y el cliente no tiene RTN. Trata de pedirlo y agregarlo al cliente.` : null,
   };
 }
@@ -585,6 +590,6 @@ ventas.post('/:id/pagar', async (req, res) => {
     const resultado = await facturarVenta(req, req.params.id, req.body);
     res.json(resultado);
   } catch (e) {
-    res.status(e.status ?? 400).json({ error: e.message });
+    res.status(e.status ?? 400).json({ error: e.message, codigo: e.codigo, faltantes: e.faltantes });
   }
 });
