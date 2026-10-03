@@ -11,13 +11,19 @@ import { sucursalesDe } from '../lib/empresas.js';
 // (producto, cantidad, proyecto y responsable). Se puede sumar (sacar más), restar
 // (devolver a bodega) y cerrar el proyecto; lo que no regresa cuenta como consumido.
 export const disercoSalidas = Router();
-const LEE = ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'];
-const MUEVE = ['admin', 'gerente', 'bodega'];
+const LEE = ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega', 'gestor'];
+const MUEVE = ['admin', 'gerente', 'bodega', 'gestor'];
 const GERENCIA = ['admin', 'gerente'];
 const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ error: e.message ?? String(e), codigo: e.codigo, faltantes: e.faltantes });
 const err = (msg, status = 400) => Object.assign(new Error(msg), { status });
 
 const SEL = '*, cotizacion:d_cotizaciones(codigo, proyecto, nombre_cliente), creador:perfiles!d_salidas_creada_por_fkey(nombre), items:d_salida_items(id, producto_id, cantidad_salida, cantidad_retorno, costo_unitario, productos(nombre, presentacion, unidad_venta, codigo))';
+
+// El gestor de proyecto ve cantidades, no costos.
+function sinCostos(rol, s) {
+  if (rol !== 'gestor') return s;
+  return { ...s, costo_total: undefined, items: s.items.map((i) => ({ ...i, costo: undefined, costo_unitario: undefined })) };
+}
 
 function resumen(s) {
   const items = (s.items ?? []).map((i) => {
@@ -86,6 +92,13 @@ async function revisarFaltantes(items, confirmar) {
   return faltantes;
 }
 
+// Proyectos para elegir (cotizaciones de proyecto aprobadas): sin montos.
+disercoSalidas.get('/proyectos', requireRole(...LEE), async (req, res) => {
+  const { data, error } = await db.from('d_cotizaciones').select('id, codigo, proyecto, nombre_cliente').eq('tipo', 'proyecto').in('estado', ['aprobada', 'facturada']).order('created_at', { ascending: false }).limit(200);
+  if (error) return fallo(res, error, 500);
+  res.json(data);
+});
+
 disercoSalidas.get('/', requireRole(...LEE), async (req, res) => {
   let q = db.from('d_salidas').select(SEL).order('created_at', { ascending: false }).limit(200);
   if (req.query.estado) q = q.eq('estado', req.query.estado);
@@ -93,13 +106,13 @@ disercoSalidas.get('/', requireRole(...LEE), async (req, res) => {
   const { data, error } = await q;
   if (error) return fallo(res, error, 500);
   const t = String(req.query.q ?? '').trim().toLowerCase();
-  res.json(data.map(resumen).filter((s) => !t || [s.proyecto, s.responsable].some((v) => String(v).toLowerCase().includes(t))));
+  res.json(data.map(resumen).filter((s) => !t || [s.proyecto, s.responsable].some((v) => String(v).toLowerCase().includes(t))).map((s) => sinCostos(req.perfil.rol, s)));
 });
 
 disercoSalidas.get('/:id', requireRole(...LEE), async (req, res) => {
   const s = await cargar(req.params.id);
   if (!s) return res.status(404).json({ error: 'Salida no encontrada' });
-  res.json(s);
+  res.json(sinCostos(req.perfil.rol, s));
 });
 
 disercoSalidas.post('/', requireRole(...MUEVE), async (req, res) => {
@@ -107,8 +120,8 @@ disercoSalidas.post('/', requireRole(...MUEVE), async (req, res) => {
   try {
     const proyecto = String(req.body.proyecto ?? '').trim();
     const responsable = String(req.body.responsable ?? '').trim();
-    if (!proyecto) throw err('Indica a qué proyecto va el material');
-    if (!responsable) throw err('Indica quién se lo lleva (responsable)');
+    if (proyecto.length < 3) throw err('Indica a qué proyecto va el material (obligatorio)');
+    if (responsable.length < 3) throw err('Escribe el nombre de quien se lleva el material (obligatorio)');
     const items = leerItems(req.body.items);
     if (items.some((i) => i.cantidad < 0)) throw err('Una salida nueva solo lleva cantidades positivas');
     const faltantes = await revisarFaltantes(items, !!req.body.confirmar_sin_stock);
@@ -120,7 +133,7 @@ disercoSalidas.post('/', requireRole(...MUEVE), async (req, res) => {
     for (const it of items) await mover(req, salida, it.producto_id, it.cantidad, { forzar: faltantes.length > 0 });
     await registrarAuditoria(req, { accion: 'salida.crear', entidad: 'd_salida', entidadId: salida.id, sucursalId: sucursal_id, detalle: { numero: salida.numero, proyecto, responsable, productos: items.length } });
     if (faltantes.length) await crearAlerta(req, { tipo: 'inventario.salida_sin_stock', severidad: 'baja', titulo: `Salida a ${proyecto} sin existencia suficiente (${req.perfil.nombre})`, sucursalId: sucursal_id, entidad: 'd_salida', entidadId: salida.id, detalle: { faltantes: faltantes.map((f) => `${f.producto}: pidió ${f.pedido}, había ${f.hay}`).join(' · ') } });
-    res.status(201).json(await cargar(salida.id));
+    res.status(201).json(sinCostos(req.perfil.rol, await cargar(salida.id)));
   } catch (e) {
     if (creada) {
       // Si algo falló a medias, lo ya movido regresa a bodega y la salida se descarta.
@@ -146,7 +159,7 @@ disercoSalidas.post('/:id/movimiento', requireRole(...MUEVE), async (req, res) =
     for (const it of items) await mover(req, salida, it.producto_id, it.cantidad, { forzar: faltantes.length > 0 });
     await registrarAuditoria(req, { accion: 'salida.movimiento', entidad: 'd_salida', entidadId: salida.id, sucursalId: salida.sucursal_id, detalle: { numero: salida.numero, proyecto: salida.proyecto, items } });
     if (faltantes.length) await crearAlerta(req, { tipo: 'inventario.salida_sin_stock', severidad: 'baja', titulo: `Material para ${salida.proyecto} sacado sin existencia suficiente (${req.perfil.nombre})`, sucursalId: salida.sucursal_id, entidad: 'd_salida', entidadId: salida.id, detalle: { faltantes: faltantes.map((f) => `${f.producto}: pidió ${f.pedido}, había ${f.hay}`).join(' · ') } });
-    res.json(await cargar(salida.id));
+    res.json(sinCostos(req.perfil.rol, await cargar(salida.id)));
   } catch (e) {
     fallo(res, e);
   }
@@ -163,8 +176,9 @@ disercoSalidas.post('/:id/cerrar', requireRole(...MUEVE), async (req, res) => {
     }
     await db.from('d_salidas').update({ estado: 'cerrada', cerrada_at: new Date().toISOString(), cerrada_por: req.perfil.id }).eq('id', salida.id);
     const fin = await cargar(salida.id);
+    const finVisible = sinCostos(req.perfil.rol, fin);
     await registrarAuditoria(req, { accion: 'salida.cerrar', entidad: 'd_salida', entidadId: salida.id, sucursalId: salida.sucursal_id, detalle: { numero: salida.numero, proyecto: salida.proyecto, sobrante: req.body.sobrante ?? 'consumido', costo_consumido: fin.costo_total } });
-    res.json(fin);
+    res.json(finVisible);
   } catch (e) {
     fallo(res, e);
   }

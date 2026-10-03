@@ -101,7 +101,7 @@ function PantallaLogin({ onEntrar }) {
 
 const PANTALLAS = [
   { id: 'd-cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], empresas: ['diserco'], Componente: CotizacionesD },
-  { id: 'd-salidas', etiqueta: 'Salidas a proyecto', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: SalidasD },
+  { id: 'd-salidas', etiqueta: 'Salidas a proyecto', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega', 'gestor'], empresas: ['diserco'], Componente: SalidasD },
   { id: 'd-catalogo', etiqueta: 'Productos', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: CatalogoD },
   { id: 'd-inventario', etiqueta: 'Inventario', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: InventarioD },
   { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], empresas: ['ecostone'], Componente: Cotizaciones },
@@ -263,7 +263,7 @@ function PantallaApp({ session, onSalir }) {
   useEffect(() => {
     if (!perfil) return;
     api.precargar(session, perfil.rol);
-    if (perfil.rol === 'produccion') return;
+    if (['produccion', 'gestor'].includes(perfil.rol)) return;
     const t = setTimeout(() => {
       for (const f of [() => import('./screens/Cotizaciones.jsx'), () => import('./screens/CotizacionEditor.jsx'), () => import('./screens/Pos.jsx'), () => import('./screens/Facturas.jsx'), () => import('./screens/Inventario.jsx'), () => import('./screens/Clientes.jsx')]) f().catch(() => {});
     }, 1500);
@@ -379,7 +379,7 @@ function PantallaApp({ session, onSalir }) {
   const Componente = actual.Componente;
   const puedeCambiarSucursal = !perfil.sucursal_id && sucursales.length > 1;
 
-  if (perfil.rol === 'produccion') {
+  if (['produccion', 'gestor'].includes(perfil.rol)) {
     return (
       <div className="app-produccion" style={{ '--color-sucursal': colorActivo }}>
         <header className="app-produccion-barra">
@@ -493,7 +493,7 @@ function PantallaApp({ session, onSalir }) {
             <span className="sidebar-avatar">{(perfil.nombre ?? '?').trim().slice(0, 1).toUpperCase()}</span>
             <span className="sidebar-usuario-texto">
               <strong>{perfil.nombre}</strong>
-              <small>{{ admin: 'Administrador', gerente: 'Gerente', vendedor: 'Vendedor', ventas: 'Ventas', cajero: 'Cajero', bodega: 'Bodega / despacho', produccion: 'Producción' }[perfil.rol] ?? perfil.rol}</small>
+              <small>{{ admin: 'Administrador', gerente: 'Gerente', vendedor: 'Vendedor', ventas: 'Ventas', cajero: 'Cajero', bodega: 'Bodega / despacho', produccion: 'Producción', gestor: 'Gestor de proyecto' }[perfil.rol] ?? perfil.rol}</small>
             </span>
             <button className="boton-icono" onClick={salir} title="Cerrar sesión" aria-label="Cerrar sesión">
               <Icono nombre="salir" tam={18} />

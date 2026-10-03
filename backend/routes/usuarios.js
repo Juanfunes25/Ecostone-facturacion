@@ -29,7 +29,7 @@ usuarios.get('/', requireRole('admin'), async (req, res) => {
 // depende del dashboard de Supabase para dar de alta a un cajero nuevo.
 usuarios.post('/', requireRole('admin'), async (req, res) => {
   const { acceso, password, nombre, rol, sucursal_id, cierre_ciego, sin_horario } = req.body;
-  const empresasPerfil = await empresasValidas(req.body.empresas);
+  const empresasPerfil = rol === 'gestor' ? ['diserco'] : await empresasValidas(req.body.empresas);
   if (!String(acceso ?? '').trim() || !password || !String(nombre ?? '').trim()) {
     return res.status(400).json({ error: 'Usuario (o correo), contraseña y nombre son obligatorios' });
   }
@@ -98,7 +98,7 @@ usuarios.post('/', requireRole('admin'), async (req, res) => {
 usuarios.put('/:id', requireRole('admin'), async (req, res) => {
   olvidarSesiones();
   const { nombre, rol, sucursal_id, cierre_ciego, sin_horario, activo } = req.body;
-  const empresasPerfil = req.body.empresas === undefined ? undefined : await empresasValidas(req.body.empresas);
+  const empresasPerfil = rol === 'gestor' ? ['diserco'] : req.body.empresas === undefined ? undefined : await empresasValidas(req.body.empresas);
   const { data: anterior } = await db.from('perfiles').select('*').eq('id', req.params.id).maybeSingle();
   const { data, error } = await db
     .from('perfiles')

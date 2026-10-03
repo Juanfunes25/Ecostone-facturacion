@@ -79,10 +79,11 @@ disercoCatalogo.put('/productos/:id', requireRole(...GERENCIA), async (req, res)
 });
 
 // ── Inventario ───────────────────────────────────────────────────────────────
-disercoCatalogo.get('/inventario', requireRole(...LEE), async (req, res) => {
+disercoCatalogo.get('/inventario', requireRole(...LEE, 'gestor'), async (req, res) => {
   const { data, error } = await db.from('productos').select('id, codigo, nombre, presentacion, unidad_venta, costo_estandar, precio, stock_minimo, controla_inventario, activo, categorias(nombre)').eq('empresa', 'diserco').eq('controla_inventario', true).eq('activo', true).order('nombre');
   if (error) return fallo(res, error, 500);
-  res.json(await conExistencia(data));
+  const filas = await conExistencia(data);
+  res.json(req.perfil.rol === 'gestor' ? filas.map(({ costo_estandar, precio, ...resto }) => resto) : filas);
 });
 
 disercoCatalogo.get('/inventario/kardex', requireRole(...LEE), async (req, res) => {

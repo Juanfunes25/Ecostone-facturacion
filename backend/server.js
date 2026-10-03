@@ -72,14 +72,19 @@ app.post('/api/sesion/login-fallido', async (req, res) => {
 
 app.use('/api', requireAuth);
 
-// El operario de planta (rol "produccion") solo puede usar su módulo de registro:
-// nada de ventas, costos, precios ni clientes, aunque llame a la API a mano.
-const RUTAS_OPERARIO = [/^\/api\/perfil$/, /^\/api\/sucursales$/, /^\/api\/registro-produccion(\/|$)/, /^\/api\/antifraude\/evento$/];
+// El operario de planta (rol "produccion") solo puede usar su módulo de registro, y el
+// gestor de proyecto (DISERCO) solo las salidas de material: nada de ventas, costos,
+// precios ni clientes, aunque llamen a la API a mano.
+const RUTAS_POR_ROL = {
+  produccion: [/^\/api\/perfil$/, /^\/api\/sucursales$/, /^\/api\/registro-produccion(\/|$)/, /^\/api\/antifraude\/evento$/],
+  gestor: [/^\/api\/perfil$/, /^\/api\/sucursales$/, /^\/api\/diserco\/salidas(\/|$)/, /^\/api\/diserco\/inventario$/, /^\/api\/antifraude\/evento$/],
+};
 app.use('/api', (req, res, next) => {
-  if (req.perfil?.rol !== 'produccion') return next();
+  const permitidas = RUTAS_POR_ROL[req.perfil?.rol];
+  if (!permitidas) return next();
   const ruta = req.originalUrl.split('?')[0];
-  if (RUTAS_OPERARIO.some((r) => r.test(ruta))) return next();
-  registrarAuditoria(req, { accion: 'acceso.denegado', entidad: 'sistema', sucursalId: req.perfil.sucursal_id ?? null, detalle: { metodo: req.method, ruta, rol: 'produccion' } });
+  if (permitidas.some((r) => r.test(ruta))) return next();
+  registrarAuditoria(req, { accion: 'acceso.denegado', entidad: 'sistema', sucursalId: req.perfil.sucursal_id ?? null, detalle: { metodo: req.method, ruta, rol: req.perfil.rol } });
   res.status(403).json({ error: 'No tiene permiso para esta acción' });
 });
 

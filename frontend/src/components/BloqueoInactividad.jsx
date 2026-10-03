@@ -11,7 +11,7 @@ import { IsotipoEcoStone } from './Icono.jsx';
 // no se pierde.
 export default function BloqueoInactividad({ session, perfil }) {
   const [bloqueada, setBloqueada] = useState(false);
-  const [minutos, setMinutos] = useState(['cajero', 'ventas'].includes(perfil.rol) ? 10 : perfil.rol === 'produccion' ? 120 : 20);
+  const [minutos, setMinutos] = useState(['cajero', 'ventas'].includes(perfil.rol) ? 10 : ['produccion', 'gestor'].includes(perfil.rol) ? 120 : 20);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [intentos, setIntentos] = useState(0);

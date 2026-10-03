@@ -121,13 +121,14 @@ export default function Usuarios({ session }) {
             value={form.nombre}
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
           />
-          <select value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })}>
+          <select value={form.rol} onChange={(e) => { const rol = e.target.value; const diserco = sucursales.find((s) => s.empresa === 'diserco'); setForm(rol === 'gestor' ? { ...form, rol, empresas: ['diserco'], sucursal_id: diserco?.id ?? form.sucursal_id } : { ...form, rol }); }}>
             <option value="cajero">Cajero</option>
             <option value="ventas">Ventas</option>
             <option value="gerente">Gerente</option>
             <option value="vendedor">Vendedor</option>
             <option value="bodega">Bodega / despacho</option>
             <option value="produccion">Producción</option>
+            <option value="gestor">Gestor de proyecto (DISERCO)</option>
             <option value="admin">Administrador</option>
           </select>
           <select value={form.sucursal_id} onChange={(e) => setForm({ ...form, sucursal_id: e.target.value })}>
