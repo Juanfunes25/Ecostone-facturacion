@@ -19,6 +19,7 @@ function SelectorProductos({ productos, items, onCambiar }) {
   const [cat, setCat] = useState('');
   const categorias = useMemo(() => [...new Set(productos.map((p) => p.categorias?.nombre).filter(Boolean))], [productos]);
   const resultados = useMemo(() => productos.filter((p) => (!cat || p.categorias?.nombre === cat) && (!q.trim() || coincide(p, q))), [productos, q, cat]);
+  const buscando = Boolean(q.trim() || cat);
   const cantidadDe = (id) => items.find((i) => i.producto_id === id)?.cantidad ?? '';
   const poner = (id, texto) => {
     const c = Math.max(0, Math.round(Number(texto)) || 0);
@@ -38,31 +39,43 @@ function SelectorProductos({ productos, items, onCambiar }) {
           </div>
         </div>
       )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 4px 2px', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
-        <span>Producto</span><span>Cantidad</span>
-      </div>
-      <div style={{ maxHeight: 340, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
-        {resultados.map((p) => {
-          const n = cantidadDe(p.id);
-          const falta = n !== '' && n > p.existencia;
-          return (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', borderBottom: '1px solid var(--border)', background: n !== '' ? 'color-mix(in srgb, var(--color-sucursal) 14%, transparent)' : undefined }}>
-              <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
-                <span style={{ fontSize: '0.92rem', fontWeight: n !== '' ? 700 : 500 }}>{p.nombre}</span>
-                <small style={{ display: 'block', color: falta ? 'var(--peligro)' : p.existencia > 0 ? 'var(--text-dim)' : 'var(--peligro)' }}>Hay {num(p.existencia, 0)}{falta ? ' · no alcanza' : ''}</small>
-              </div>
-              <input type="number" inputMode="numeric" min="0" step="1" placeholder="0" value={n} onChange={(e) => poner(p.id, e.target.value)} aria-label={`Cantidad de ${p.nombre}`} style={{ width: 64, textAlign: 'center', fontSize: '1.1rem', fontWeight: 700, padding: '8px 4px' }} />
-            </div>
-          );
-        })}
-        {resultados.length === 0 && <p style={{ color: 'var(--text-dim)', textAlign: 'center' }}>{productos.length === 0 ? 'No hay productos con control de inventario.' : 'No encontré ese producto. Prueba con otra palabra.'}</p>}
-      </div>
-      {items.length > 0 && (
-        <div style={{ marginTop: 10, padding: '8px 10px', border: '1px solid var(--color-sucursal)', borderRadius: 10 }}>
-          <strong style={{ fontSize: '0.9rem' }}>Llevas {items.length} producto{items.length === 1 ? '' : 's'} ({items.reduce((s, i) => s + i.cantidad, 0)} unidades)</strong>
-          {items.map((i) => { const p = productos.find((x) => x.id === i.producto_id); return <div key={i.producto_id} style={{ fontSize: '0.88rem', display: 'flex', justifyContent: 'space-between', gap: 8 }}><span>{p?.nombre}</span><strong>{i.cantidad}</strong></div>; })}
-        </div>
+      {buscando && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 4px 2px', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
+            <span>Resultados</span><span>Cantidad</span>
+          </div>
+          <div style={{ maxHeight: 300, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
+            {resultados.map((p) => <Fila key={p.id} p={p} n={cantidadDe(p.id)} onCambiar={(t) => poner(p.id, t)} />)}
+            {resultados.length === 0 && <p style={{ color: 'var(--text-dim)', textAlign: 'center' }}>No encontré ese producto. Prueba con otra palabra.</p>}
+          </div>
+        </>
       )}
+      {!buscando && <p style={{ color: 'var(--text-dim)', margin: '8px 0' }}>{productos.length === 0 ? 'No hay productos con control de inventario.' : 'Escribe el nombre o elige una categoría para encontrar el producto.'}</p>}
+
+      <div style={{ marginTop: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', padding: '0 4px 2px' }}>
+          <span>Material seleccionado ({items.reduce((s, i) => s + i.cantidad, 0)})</span><span>Cantidad</span>
+        </div>
+        <div style={{ borderTop: '2px solid var(--color-sucursal)' }}>
+          {items.map((i) => { const p = productos.find((x) => x.id === i.producto_id); return p ? <Fila key={i.producto_id} p={p} n={i.cantidad} onCambiar={(t) => poner(p.id, t)} quitar /> : null; })}
+          {items.length === 0 && <p style={{ color: 'var(--text-dim)', textAlign: 'center', margin: '10px 0' }}>Todavía no has agregado productos.</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Fila compacta: nombre, existencia y casilla de cantidad (0 o vacío la quita).
+function Fila({ p, n, onCambiar, quitar = false }) {
+  const falta = n !== '' && n > p.existencia;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', borderBottom: '1px solid var(--border)', background: n !== '' ? 'color-mix(in srgb, var(--color-sucursal) 12%, transparent)' : undefined }}>
+      <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+        <span style={{ fontSize: '0.92rem', fontWeight: n !== '' ? 700 : 500 }}>{p.nombre}</span>
+        <small style={{ display: 'block', color: falta || p.existencia <= 0 ? 'var(--peligro)' : 'var(--text-dim)' }}>Hay {num(p.existencia, 0)}{falta ? ' · no alcanza' : ''}</small>
+      </div>
+      <input type="number" inputMode="numeric" min="0" step="1" placeholder="0" value={n} onChange={(e) => onCambiar(e.target.value)} aria-label={`Cantidad de ${p.nombre}`} style={{ width: 64, textAlign: 'center', fontSize: '1.1rem', fontWeight: 700, padding: '8px 4px' }} />
+      {quitar && <button className="boton-sm boton-secundario" aria-label="Quitar" onClick={() => onCambiar(0)}>✕</button>}
     </div>
   );
 }
