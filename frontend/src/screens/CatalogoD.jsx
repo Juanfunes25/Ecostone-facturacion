@@ -4,7 +4,7 @@ import Modal, { Campo, Etiqueta } from '../components/Modal.jsx';
 import { L, num } from '../lib/fmt.js';
 
 const UNIDADES = ['unidad', 'kit', 'galon', 'cubeta', 'saco', 'litro', 'm2', 'ml'];
-const VACIO = { nombre: '', codigo: '', categoria_id: '', presentacion: 'Kit', unidad_venta: 'kit', precio: '', costo_estandar: '', rendimiento_texto: '', controla_inventario: true, stock_minimo: '0', activo: true };
+const VACIO = { nombre: '', codigo: '', marca: '', categoria_id: '', presentacion: 'Kit', unidad_venta: 'kit', precio: '', costo_estandar: '', rendimiento_texto: '', controla_inventario: true, stock_minimo: '0', activo: true };
 
 // Catálogo de productos de DISERCO. Los precios van SIN ISV (el ISV se suma en la cotización).
 export default function CatalogoD({ session, perfil }) {
@@ -57,12 +57,12 @@ export default function CatalogoD({ session, perfil }) {
             <tbody>
               {visibles.map((p) => (
                 <tr key={p.id} style={p.activo ? undefined : { opacity: 0.5 }}>
-                  <td><strong>{p.nombre}</strong>{p.codigo && <small style={{ display: 'block', color: 'var(--text-dim)' }}>{p.codigo}</small>}{p.rendimiento_texto && <small style={{ display: 'block', color: 'var(--text-dim)' }}>Rendimiento: {p.rendimiento_texto}</small>}</td>
+                  <td><strong>{p.nombre}</strong><small style={{ display: 'block', color: 'var(--text-dim)' }}>{[p.codigo, p.marca, p.categorias?.nombre].filter(Boolean).join(' · ')}</small>{p.rendimiento_texto && <small style={{ display: 'block', color: 'var(--text-dim)' }}>Rendimiento: {p.rendimiento_texto}</small>}</td>
                   <td>{p.presentacion ?? p.unidad_venta}</td>
                   <td style={{ textAlign: 'right' }}>{L(p.precio)}</td>
                   <td style={{ textAlign: 'right' }}>{Number(p.costo_estandar) > 0 ? L(p.costo_estandar) : '—'}</td>
                   <td style={{ textAlign: 'right' }}>{p.controla_inventario ? <>{num(p.existencia, 0)} {p.bajo_minimo && <Etiqueta tono="peligro">bajo mínimo</Etiqueta>}</> : <small style={{ color: 'var(--text-dim)' }}>sin control</small>}</td>
-                  <td>{gerencia && <button className="boton-sm boton-secundario" onClick={() => setModal({ id: p.id, form: { ...VACIO, ...p, categoria_id: p.categoria_id ?? '', precio: String(Number(p.precio)), costo_estandar: String(Number(p.costo_estandar) || ''), stock_minimo: String(Number(p.stock_minimo) || 0), codigo: p.codigo ?? '', presentacion: p.presentacion ?? '', rendimiento_texto: p.rendimiento_texto ?? '' } })}>Editar</button>}</td>
+                  <td>{gerencia && <button className="boton-sm boton-secundario" onClick={() => setModal({ id: p.id, form: { ...VACIO, ...p, categoria_id: p.categoria_id ?? '', precio: String(Number(p.precio)), costo_estandar: String(Number(p.costo_estandar) || ''), stock_minimo: String(Number(p.stock_minimo) || 0), codigo: p.codigo ?? '', marca: p.marca ?? '', presentacion: p.presentacion ?? '', rendimiento_texto: p.rendimiento_texto ?? '' } })}>Editar</button>}</td>
                 </tr>
               ))}
               {visibles.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-dim)' }}>Sin productos. Crea el primero con “+ Nuevo producto”.</td></tr>}
@@ -74,11 +74,12 @@ export default function CatalogoD({ session, perfil }) {
         <Modal titulo={modal.id ? 'Editar producto' : 'Nuevo producto'} onCerrar={() => setModal(null)} pie={<><button className="boton-md" disabled={!modal.form.nombre.trim() || modal.form.precio === ''} onClick={guardar}>Guardar</button><button className="boton-md boton-secundario" onClick={() => setModal(null)}>Cancelar</button></>}>
           <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <Campo etiqueta="Nombre"><input value={modal.form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej.: Epóxico Quarzo Autonivelante Top - Ivory" /></Campo>
+            <Campo etiqueta="Marca" ancho={160}><input value={modal.form.marca} onChange={(e) => set('marca', e.target.value)} placeholder="Ej.: KAIDA" /></Campo>
             <Campo etiqueta="Código" ancho={120}><input value={modal.form.codigo} onChange={(e) => set('codigo', e.target.value)} /></Campo>
             <Campo etiqueta="Categoría" ancho={200}><select value={modal.form.categoria_id} onChange={(e) => set('categoria_id', e.target.value)}><option value="">—</option>{categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></Campo>
             <Campo etiqueta="Presentación" ancho={140}><input value={modal.form.presentacion} onChange={(e) => set('presentacion', e.target.value)} placeholder="Kit, galón…" /></Campo>
             <Campo etiqueta="Unidad de venta" ancho={140}><select value={modal.form.unidad_venta} onChange={(e) => set('unidad_venta', e.target.value)}>{UNIDADES.map((u) => <option key={u}>{u}</option>)}</select></Campo>
-            <Campo etiqueta="Precio de venta (sin ISV)" ancho={170}><input type="number" step="0.01" min="0" value={modal.form.precio} onChange={(e) => set('precio', e.target.value)} /></Campo>
+            <Campo etiqueta="Precio de venta (sin ISV)" ancho={170}><input type="number" step="any" min="0" value={modal.form.precio} onChange={(e) => set('precio', e.target.value)} /></Campo>
             <Campo etiqueta="Costo (sin ISV)" ancho={150} ayuda="Se actualiza solo con las compras"><input type="number" step="0.01" min="0" value={modal.form.costo_estandar} onChange={(e) => set('costo_estandar', e.target.value)} /></Campo>
             <Campo etiqueta="Rendimiento aproximado" ayuda="Sale en la cotización de productos"><input value={modal.form.rendimiento_texto} onChange={(e) => set('rendimiento_texto', e.target.value)} placeholder="Ej.: 15 m2 aproximadamente" /></Campo>
             <Campo etiqueta="Mínimo en inventario" ancho={150}><input type="number" step="1" min="0" value={modal.form.stock_minimo} onChange={(e) => set('stock_minimo', e.target.value)} /></Campo>

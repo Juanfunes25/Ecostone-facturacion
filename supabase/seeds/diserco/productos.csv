@@ -1,0 +1,284 @@
+id,id_origen_wizpos,nombre,descripcion,codigo_barra,categoria_id,marca_id,tipo,costo,precio_con_isv,precio_sin_isv,isv_tasa,isv_nombre,existencia_inicial,maneja_inventario,minimo,maximo,para_venta,fisico,activo,alerta
+3,3,Clear Sealer Cub 5 Gal,,,12,,Compuesto,1608.305,5453.72,4742.3652,0.15,ISV - 15%,55.7,1,0,0,1,1,1,sin_marca;compuesto_sin_componentes
+4,4,Clear Sealer 1 Galon,1 Galon,,12,,Compuesto,310.66,1217.82,1058.9739,0.15,ISV - 15%,0,1,0,0,1,1,1,existencia_negativa_a_cero;sin_marca;compuesto_sin_componentes
+5,5,Clear Sealer Barril,,,12,,Compuesto,13933.05,54363.49,47272.6,0.15,ISV - 15%,0,1,0,0,1,1,1,existencia_negativa_a_cero;sin_marca;compuesto_sin_componentes
+6,6,Color Integral Negro y Rojo,,,1,,Individual,0,196.58,170.9391,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+7,7,Color Integral Amarillo,,,1,,Individual,0,223.33,194.2,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+8,8,Color Integral,,,1,,Individual,0,9110.26,7921.9652,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+9,9,Chlor Stain,,,11,,Individual,0,3035.25,2639.3478,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+10,10,Extender For Chlorstain,,,11,1,Individual,0,1003.07,872.2348,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero
+11,11,Clear Hydro Sealer,,,1,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+12,12,Seamless Epoxy System,,,1,,Individual,0,11982.62,10419.6696,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca;nombre_duplicado
+13,13,Seamless Epoxy System,,,1,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;sin_marca;nombre_duplicado
+14,14,Sistema 2 resin: 1 Hardener,,,1,,Individual,0,13024.59,11325.7304,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;sin_marca
+15,15,Arena Silica - Quartz Sans,,,1,,Individual,0,2354.5,2047.3913,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+16,16,Super Tex wet&Ready blco,,,1,,Individual,0,1593.86,1385.9652,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+17,17,Super Tex wet&Ready Ivory,,,1,,Individual,0,1495.22,1300.1913,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+18,18,Liquid Reiease,,,1,,Individual,0,6965.9,6057.3043,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+19,19,Crack Repair Epoxy Portion Pack,,,1,,Individual,0,3099.85,2695.5217,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+22,22,Super Grip,,,1,,Individual,0,1114.56,969.1826,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;sin_marca
+24,24,Microtopping White,,,1,,Individual,0,3343.67,2907.5391,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;sin_marca
+25,25,Microtopping Resin,,,1,,Individual,0,9287.75,8076.3043,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;sin_marca
+26,26,Sealer VOC Barril,,,1,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;sin_marca
+27,27,Sealer VOC Cubeta,,,12,,Individual,0,7651.86,6653.7913,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;sin_marca
+28,28,Solvente,,,1,,Individual,0,420.26,365.4435,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+29,29,Versa Look Kit,,,12,1,Individual,0,13024.59,11325.7304,0.15,ISV - 15%,2,1,0,0,1,1,1,costo_cero
+31,31,SR2 AMERIPOLYSH GALON,,,7,3,Individual,0,12118.65,10537.9565,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero
+32,32,Antique,,,11,1,Individual,0,1014.88,882.5043,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero
+33,33,Hojuelas de Vinilo,,,1,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca;nombre_duplicado
+34,34,Hojuelas de Vinilo,,,1,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca;nombre_duplicado
+35,35,Sellador con Color Galon,,,12,,Compuesto,850,1573.93,1368.6348,0.15,ISV - 15%,0,1,0,0,1,1,1,existencia_negativa_a_cero;sin_marca;compuesto_sin_componentes
+36,36,Decco Eco Sellador Matte,,,13,,Individual,0,0,0.0,0.15,ISV - 15%,6,1,0,0,1,1,1,costo_cero;precio_cero;sin_marca
+37,37,Decco Wb Color Toner,,,13,,Individual,0,1745.06,1517.4435,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+38,38,Decco Microtop one,,,13,,Individual,0,7634.67,6638.8435,0.15,ISV - 15%,6,1,0,0,1,1,1,costo_cero;sin_marca
+39,39,Decco Primer,,,13,,Individual,0,2544.89,2212.9478,0.15,ISV - 15%,14,1,0,0,1,1,1,costo_cero;sin_marca
+40,40,Decco MicroQuartz,,,13,,Individual,0,11688.15,10163.6087,0.15,ISV - 15%,1,1,0,0,1,1,1,costo_cero;sin_marca
+41,41,Bracket Tilt,,,3,,Individual,0,3726.53,3240.4609,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+42,42,S Tool,,,3,,Individual,0,654.58,569.2,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+43,43,Tamper,,,3,,Individual,0,6687.35,5815.087,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;sin_marca
+44,44,Flota de Magnesio,,,3,,Individual,0,6417.91,5580.7913,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;sin_marca
+45,45,"Llana de mano curva 24x5""",,,3,,Individual,0,681.98,593.0261,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+64,64,Servicios de Construccion,,,2,,Individual,0,0,0.0,0.0,Exento,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+65,65,Trabajos Resina Epoxica m2,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+66,66,Trabajos Resina Epoxica ml,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+67,67,Trabajos Resina Durachips m2,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+68,68,Trabajos Resina Durachips ml,,,2,,Individual,0,2,1.7391,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;existencia_negativa_a_cero;sin_marca
+69,69,Trabajos Uretano m2,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+70,70,Trabajos Uretano  ml,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+71,71,Trabajos Resina Industrial,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca;nombre_duplicado
+72,72,Trabajos Resina Industrial,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;sin_marca;nombre_duplicado
+73,73,Trabajos Estampado m2,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+74,74,Trabajos Estampado ml,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+75,75,Trabajos Permashine m2,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+76,76,Trabajos Permashine ml,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+77,77,Trabajos Microcemento m2,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;sin_marca
+78,78,Trabajos Microcemento ml,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;sin_marca
+79,79,Trabajos Resellado m2,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+80,80,Trabajos Resellado ml,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;sin_marca
+81,81,Trabajos Industriales m2,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+82,82,Trabajos Industriales ml,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+83,83,Trabajos de Concreto m2,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;sin_marca
+84,84,Trabajos de Concreto ml,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,0,0,1,1,1,costo_cero;precio_cero;sin_marca
+85,85,Terra Cotta Color Hardener 60lb Cub,Terra Cotta Color Hardener 60lb Cub,,5,,Individual,0,1924.13,1673.1565,0.15,ISV - 15%,8,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+86,86,Ivory Sand Color Hardener 60lb Cub,Ivory Sand Color Hardener 60lb Cub,,5,,Individual,0,1924.13,1673.1565,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+87,87,Almond Color Hardener 60lb Cub,Almond Color Hardener 60lb Cub,,5,,Individual,0,1924.13,1673.1565,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+88,88,Eastern Tan Color Hardener 60lb Cub,Eastern Tan Color Hardener 60lb Cub,,5,,Individual,0,1924.13,1673.1565,0.15,ISV - 15%,25,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+89,89,Charcoal Color Release 30lb Cub,Charcoal Charcoal Color Release 30lb Cub,,6,,Individual,0,3537.64,3076.2087,0.15,ISV - 15%,16,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+90,90,Buff Color Release 30lb Cub,Buff Color Release 30lb Cub,,6,,Individual,0,3537.64,3076.2087,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+91,91,Dark Brown Color Release 30lb Cub,Dark Brown Color Release 30lb Cub,,6,,Individual,0,3537.64,3076.2087,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+92,92,ARRENDAMIENTO MAQUINARIAS MES DE,"PRODUCCIÓN DE HELADOS Y CAFES INCLUYE:
+MAQUINA COMBINADA Y 2 PASTEURIZADORA 
+MAQUINA PROD. HELADO Y BLAST FREEZER
+EXHIBIDORAS DE HELADO POZZETTI Y CORA PROG
+CARRITO DE HELADO Y FREEZER 1 Y VERTICAL 			
+REFRIGERADOR MAQUINA DE CAFE EXPOBAR",,2,,Individual,0,72047.56,62650.0522,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+93,93,CLARO (LINEAS DE TELEFONO 60$),,,2,,Individual,0,1725,1500.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+94,94,"DOCUMENTOS, IMPRESIONES, ADMIN, TRANSP.",,,2,,Individual,0,8107.5,7050.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+95,95,Color Hardener Silver 60lb Cub,,,5,,Individual,0,1924.13,1673.1565,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+96,96,Color Hardener Brownstone 60lb Cub,,,5,,Individual,0,1924.13,1673.1565,0.15,ISV - 15%,23,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+97,97,Color Hardener Oak 60lb Cub,,,5,,Individual,0,1924.13,1673.1565,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+98,98,Color Hardener LaCresenta 60lb Cub,,,5,,Individual,0,1924.13,1673.1565,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+99,99,Color Hardener Buff 60lb Cub,,,5,,Individual,0,1924.13,1673.1565,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+100,100,Brownstone Color Release 30lb Cub,,,6,,Individual,0,3537.64,3076.2087,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+101,101,Silver Color Release 30lb Cub,,,6,,Individual,0,3537.64,3076.2087,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+102,102,Clear Color Release 30lb Cub,,,6,1,Individual,0,3537.64,3076.2087,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,costo_cero
+103,103,Light Buff Color Release 30lb Cub,,,6,,Individual,0,3537.64,3076.2087,0.15,ISV - 15%,8,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+104,104,SOLVENTE BARRIL 55 GAL,,,1,,Individual,0,11553.46,10046.487,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+105,105,RESINA ACRILICA SOLIDA LB,,,1,,Individual,0,1.9,1.6522,0.15,ISV - 15%,441,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+106,106,Cubeta Metal,,,1,,Empaque,0,227.68,197.9826,0.15,ISV - 15%,0,1,-2147483648,2147483647,0,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+107,107,Galon Metal,,,1,,Empaque,0,33.89,29.4696,0.15,ISV - 15%,0,1,-2147483648,2147483647,0,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+108,108,Epóxico Blanco en Flexo Packaging m2,,,2,,Individual,0,2709.4,2356.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+109,109,Dia de Alquiler de Moldes,Incluye 4 rigidos y 1 flexible,,4,,Individual,0,1513.14,1315.7739,0.15,ISV - 15%,0,0,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+110,110,"DISCO HIBRIDO 3"" #50",,,7,3,Individual,100.69,253.83,220.7217,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,existencia_negativa_a_cero
+112,112,"DISCO HIBRIDO 3"" #200",,,7,3,Individual,100.69,253.83,220.7217,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+113,113,"DISCO HIBRIDO 3"" #100",,,7,3,Individual,100.69,253.83,220.7217,0.15,ISV - 15%,180,1,-2147483648,2147483647,1,0,1,
+114,114,"DISCO METAL 3"" #30 HB",,,7,3,Individual,537,1353.72,1177.1478,0.15,ISV - 15%,36,1,-2147483648,2147483647,1,0,1,
+115,115,"DISCO METAL 3"" #50 SB",,,7,3,Individual,537,1353.72,1177.1478,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+116,116,"DISCO METAL 3"" #50 MB",,,7,3,Individual,537,1353.72,1177.1478,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,existencia_negativa_a_cero
+117,117,"DISCO METAL 3"" #50 HB",,,7,3,Individual,537,1353.72,1177.1478,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+118,118,"DISCO FLECHA 3"" #30 MB",,,7,3,Individual,151.03,380.73,331.0696,0.15,ISV - 15%,30,1,-2147483648,2147483647,1,0,1,
+119,119,PCD,,,7,3,Individual,285.28,719.16,625.3565,0.15,ISV - 15%,54,1,-2147483648,2147483647,1,0,1,
+120,120,"DISCO RESINA 3"" #100",,,7,3,Individual,117.47,296.13,257.5043,0.15,ISV - 15%,49,1,-2147483648,2147483647,1,0,1,
+121,121,"DISCO RESINA 3"" #200",,,7,3,Individual,117.47,296.13,257.5043,0.15,ISV - 15%,90,1,-2147483648,2147483647,1,0,1,
+122,122,"DISCO RESINA 3"" #400",,,7,4,Individual,117.47,296.13,257.5043,0.15,ISV - 15%,65,1,-2147483648,2147483647,1,0,1,
+123,123,"DISCO RESINA 3"" #800",,,7,4,Individual,117.47,296.13,257.5043,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,existencia_negativa_a_cero
+124,124,"DISCO RESINA 3"" #1500",,,7,4,Individual,117.47,296.13,257.5043,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+125,125,"DISCO RESINA 3"" #3000",,,7,4,Individual,117.47,296.13,257.5043,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,
+126,126,"COPA FLECHA 7"" #30",,,7,3,Individual,1006.88,2538.2,2207.1304,0.15,ISV - 15%,35,1,-2147483648,2147483647,1,0,1,
+127,127,"COPA FLECHA 7"" #16",,,7,3,Individual,1174.69,2961.26,2575.0087,0.15,ISV - 15%,13,1,-2147483648,2147483647,1,0,1,
+128,128,"COPA FLECHA 7"" #9",,,7,3,Individual,1275.38,3215.09,2795.7304,0.15,ISV - 15%,16,1,-2147483648,2147483647,1,0,1,
+129,129,A CUALQUIER COSA NO EN LISTA,,,1,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;precio_cero;existencia_negativa_a_cero;sin_marca
+130,130,Sellador con Color Cubeta,,,12,,Compuesto,4000,7494.92,6517.3217,0.15,ISV - 15%,10,1,0,0,1,1,1,sin_marca;compuesto_sin_componentes
+131,131,NANO COLORANTE COPPER 609 GAL,Uso exterior e interior. Rinde 12m2,KS 609,11,5,Compuesto,590.67,1510.59,1313.5565,0.15,ISV - 15%,20,1,-2147483648,2147483647,1,0,1,compuesto_sin_componentes
+132,132,NANO COLORANTE BRASS 604 GAL,Uso exterior e interior. Rinde 12m2,KS 604,11,5,Compuesto,590.67,1510.59,1313.5565,0.15,ISV - 15%,20,1,-2147483648,2147483647,1,0,1,compuesto_sin_componentes
+133,133,NANO COLORANTE SILVER 617 GAL,Uso exterior e interior. Rinde 12m2,KS 617,11,5,Compuesto,590.67,1510.59,1313.5565,0.15,ISV - 15%,20,1,-2147483648,2147483647,1,0,1,compuesto_sin_componentes
+134,134,NANO COLORANTE IRON 620 GAL,Uso exterior e interior. Rinde 12m2,KS 620,11,5,Compuesto,590.67,1510.59,1313.5565,0.15,ISV - 15%,20,1,-2147483648,2147483647,1,0,1,compuesto_sin_componentes
+135,135,PRIMER Y TOP NANO COLORANT 1/2 GALON,rinde 20m2 1/2 de galon,,11,5,Individual,258.16,660.23,574.113,0.15,ISV - 15%,50,1,-2147483648,2147483647,1,0,1,
+136,136,COLORANT DYE CAMEL 003 GALON,Interiores y Pulido. 20m2,KD-003,11,5,Individual,652.848,1669.61,1451.8348,0.15,ISV - 15%,15,1,-2147483648,2147483647,1,0,1,
+137,137,COLORANT DYE BROWN 005 GALON,Interiores y Pulido. 20m2,KD-005,11,5,Individual,652.848,1669.61,1451.8348,0.15,ISV - 15%,15,1,-2147483648,2147483647,1,0,1,
+138,138,COLORANT DYE RED 007 GALON,Interiores y Pulido. 20m2,KD-007,11,5,Individual,652.848,1669.61,1451.8348,0.15,ISV - 15%,10,1,-2147483648,2147483647,1,0,1,
+139,139,COLORANT DYE DARK GREEN 013 GALON,Interiores y Pulido. 20m2,KD-013,11,5,Individual,652.848,1669.61,1451.8348,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,
+140,140,COLORANT DYE LIGHT GRAY 018 GALON,Interiores y Pulido. 20m2,KD-018,11,5,Individual,652.848,1669.61,1451.8348,0.15,ISV - 15%,15,1,-2147483648,2147483647,1,0,1,
+141,141,COLORANT DYE BLACK 020 GALON,Interiores y Pulido. 20m2,KD-020,11,5,Individual,652.848,1669.61,1451.8348,0.15,ISV - 15%,15,1,-2147483648,2147483647,1,0,1,
+142,142,COLORANT DYE FIXER 1/2 GALON,Interiores y Pulido. 20m2,kdl,11,5,Individual,220.41,582.28,506.3304,0.15,ISV - 15%,50,1,-2147483648,2147483647,1,0,1,
+143,143,Epóxico Quarzo AutonivelanteTop - Light Gray Kit,10m2,E8308-1,21,6,Individual,3409.97,7059.64,6138.8174,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,
+144,144,Epóxico Quarzo AutonivelanteTop - Dark Gray Kit,10m2,E8308-3,21,6,Individual,3409.97,7059.64,6138.8174,0.15,ISV - 15%,3,1,-2147483648,2147483647,1,0,1,
+145,145,Epóxico Quarzo AutonivelanteTop - Ivory Kit,10m2,E8308-11,21,6,Individual,3409.97,7059.64,6138.8174,0.15,ISV - 15%,3,1,-2147483648,2147483647,1,0,1,
+146,146,Granitex - Gray,Rinde 10m2,JD1013-3-ZQ44,13,6,Individual,748.06,1913.09,1663.5565,0.15,ISV - 15%,10,1,-2147483648,2147483647,1,0,1,
+147,147,Granitex - White,Rinde 10m2,JD1013-3-ZQ02,13,6,Individual,748.06,1913.09,1663.5565,0.15,ISV - 15%,9,1,-2147483648,2147483647,1,0,1,
+148,148,Granitex - Gold,Rinde 10m2,JD1013-3-ZQ25,13,6,Individual,748.06,1913.09,1663.5565,0.15,ISV - 15%,7,1,-2147483648,2147483647,1,0,1,
+149,149,Sellador Granitex Matte Pared 1/2 Galon,Rinde 12m2 aprox el medio galon,JD5001,13,6,Individual,174.87,447.22,388.887,0.15,ISV - 15%,49,1,-2147483648,2147483647,1,0,1,
+150,150,Primer Granitex Pared 1/2 Galon,16m2 el galon,KDJD4009,13,5,Individual,145.725,372.68,324.0696,0.15,ISV - 15%,19,1,-2147483648,2147483647,1,0,1,
+151,151,Sellador Base Agua Brillante Cubeta,100m2 por cubeta,KD-LT-S,12,2,Individual,2564.76,6559.18,5703.6348,0.15,ISV - 15%,10,1,-2147483648,2147483647,1,0,1,
+152,152,"DISCO METAL 3"" #70",METAL,,7,4,Individual,537,1353.72,1177.1478,0.15,ISV - 15%,41,1,-2147483648,2147483647,1,0,1,
+153,153,MOLDE MAJESTIC 90X90CM RIGIDO,6KG,YX044,4,2,Individual,2448.18,6261.02,5444.3652,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,
+154,154,MOLDE EUROPEAN FAN 64X113CM RIGIDO,6KG,YX228,4,2,Individual,2448.18,6261.02,5444.3652,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+155,155,MOLDE FRESH BRICK 107X120CM RIGIDO,6KG,YX334,4,2,Individual,3264.24,8348.04,7259.1652,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+156,156,MOLDE ASHLAR SLATE JUEGO DE 4 RIGIDOS,,,4,4,Individual,9380,16362.16,14227.9652,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,
+157,157,MOLDE RANDOM STONE 74X74CM RIGIDO,6KG,YX145,4,2,Individual,1632.12,4174.02,3629.5826,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+158,158,ZOCALO MILAN GRAY 2.5ML CLIP-ON,,,10,2,Individual,124.35,302.87,263.3652,0.15,ISV - 15%,109,1,-2147483648,2147483647,1,0,1,
+159,159,ZOCALO CLASSIC BLACK 2.5ML BUCKLE,,,10,2,Individual,124.35,302.87,263.3652,0.15,ISV - 15%,17,1,-2147483648,2147483647,1,0,1,
+160,160,ZOCALO CHAMPAGNE 2.5ML GLUE-ON,,,10,2,Individual,114.64,279.22,242.8,0.15,ISV - 15%,119,1,-2147483648,2147483647,1,0,1,
+161,161,ZOCALO SILVER 2.5ML GLUE-ON,,,10,2,Individual,114.64,279.22,242.8,0.15,ISV - 15%,70,1,-2147483648,2147483647,1,0,1,
+162,162,ACCESORIO - MILAN GRAY - ESQUINA INTERNA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,236,1,-2147483648,2147483647,1,0,1,
+163,163,ACCESORIO - MILAN GRAY - ESQUINA EXTERNA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,158,1,-2147483648,2147483647,1,0,1,
+164,164,ACCESORIO - MILAN GRAY - TAPA DERECHA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,112,1,-2147483648,2147483647,1,0,1,
+165,165,ACCESORIO - MILAN GRAY - TAPA IZQUIERDA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,112,1,-2147483648,2147483647,1,0,1,
+166,166,ACCESORIO - MILAN GRAY - CONECTOR,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,150,1,-2147483648,2147483647,1,0,1,
+167,167,ACCESORIO - CLASSIC BLACK - ESQUINA INTERNA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,
+168,168,ACCESORIO - CLASSIC BLACK  - ESQUINA EXTERNA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,26,1,-2147483648,2147483647,1,0,1,
+169,169,ACCESORIO - CLASSIC BLACK  - TAPA DERECHA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,41,1,-2147483648,2147483647,1,0,1,
+170,170,ACCESORIO - CLASSIC BLACK  - TAPA IZQUIERDA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,existencia_negativa_a_cero
+171,171,ACCESORIO - CLASSIC BLACK  - CONECTOR,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,10,1,-2147483648,2147483647,1,0,1,
+172,172,ACCESORIO - CHAMPAGNE - ESQUINA INTERNA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,120,1,-2147483648,2147483647,1,0,1,
+173,173,ACCESORIO - CHAMPAGNE - ESQUINA EXTERNA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,75,1,-2147483648,2147483647,1,0,1,
+174,174,ACCESORIO - CHAMPAGNE - CONECTOR,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,100,1,-2147483648,2147483647,1,0,1,
+175,175,ACCESORIO - CHAMPAGNE - TAPA DERECHA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,69,1,-2147483648,2147483647,1,0,1,
+176,176,ACCESORIO - CHAMPAGNE - TAPA IZQUIERDA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,69,1,-2147483648,2147483647,1,0,1,
+177,177,ACCESORIO - SILVER - ESQUINA EXTERNA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,44,1,-2147483648,2147483647,1,0,1,
+178,178,ACCESORIO - SILVER - ESQUINA INTERNA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,70,1,-2147483648,2147483647,1,0,1,
+179,179,ACCESORIO -  SILVER - TAPA IZQUIERDA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,49,1,-2147483648,2147483647,1,0,1,
+180,180,ACCESORIO - SILVER - TAPA DERECHA,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,44,1,-2147483648,2147483647,1,0,1,
+181,181,ACCESORIO - SILVER - CONECTOR,,,10,2,Individual,7.772,18.93,16.4609,0.15,ISV - 15%,65,1,-2147483648,2147483647,1,0,1,
+182,182,BUCKLE PARED ZOCALO CLASSIC BLACK 2.5ML,Parte de pared,,10,2,Individual,0,5.29,4.6,0.15,ISV - 15%,479,1,-2147483648,2147483647,1,0,1,costo_cero
+183,183,CLIP PARED ZOCALO MILAN GRAY 2.5ML,Parte de pared,,10,2,Individual,0,5.29,4.6,0.15,ISV - 15%,996,1,-2147483648,2147483647,1,0,1,costo_cero
+184,184,Velcro Hembra 4 pulg. 6ml,Ysibbon,,7,,Individual,739.75,1351.32,1175.0609,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,sin_marca
+185,185,Velcro Macho 4 pulg. 6ml,Ysibbon,,7,,Individual,739.75,1351.32,1175.0609,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,existencia_negativa_a_cero;sin_marca
+186,186,SACO 25KG COLOR HARDENER TERRACOTTA,RINDE,,8,2,Individual,359.46,1313.28,1141.9826,0.15,ISV - 15%,50,1,-2147483648,2147483647,1,0,1,
+187,187,SACO 25KG COLOR HARDENER IVORY SAND,RINDE,,8,2,Individual,359.46,1313.28,1141.9826,0.15,ISV - 15%,26,1,-2147483648,2147483647,1,0,1,
+188,188,SACO 25KG COLOR HARDENER SILVER,RINDE,,8,2,Individual,359.46,1313.28,1141.9826,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,existencia_negativa_a_cero
+189,189,SACO 25KG COLOR HARDENER OAK,RINDE,,8,2,Individual,359.46,1313.28,1141.9826,0.15,ISV - 15%,40,1,-2147483648,2147483647,1,0,1,
+190,190,SACO 25KG COLOR HARDENER FRENCH GRAY,RINDE,,8,2,Individual,359.46,1313.28,1141.9826,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+191,191,SACO 25KG COLOR HARDENER EASTERN TAN,RINDE,,8,2,Individual,359.46,1313.28,1141.9826,0.15,ISV - 15%,86,1,-2147483648,2147483647,1,0,1,
+192,192,SACO 15KG COLOR RELEASE CHARCOAL,,,9,2,Individual,618,1867.82,1624.1913,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,
+193,193,SACO 15KG COLOR RELEASE DARK BROWN,,,9,2,Individual,466.32,1867.82,1624.1913,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,
+194,194,SACO 15KG COLOR RELEASE BUFF,,,9,2,Individual,466.32,1867.82,1624.1913,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,
+195,195,MOLDE ABANICO CIRCULAR,,,4,1,Individual,4994.1,9122.87,7932.9304,0.15,ISV - 15%,3,1,-2147483648,2147483647,1,0,1,
+196,196,MOLDE MAJESTIC,,,4,1,Individual,4994.1,10600.12,9217.4957,0.15,ISV - 15%,7,1,-2147483648,2147483647,1,0,1,
+197,197,MOLDE RANDOM STONE,,,4,1,Individual,4994.1,9122.87,7932.9304,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,
+198,198,MOLDE ASHLAR,,,4,1,Individual,4994.1,9122.87,7932.9304,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,
+199,199,MOLDE BANDA GRANDE,,,4,1,Individual,4994.1,8063.9,7012.087,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,
+200,200,MOLDE COBBLESTONE,,,4,1,Individual,4994.1,9122.87,7932.9304,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,
+201,201,TAMPER / APISONADOR,,,4,1,Individual,4994.1,8699.28,7564.5913,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,
+202,202,NSS DENSIFICADOR HIBRIDO CUBETA,DILUIR CON AGUA 4:1 . RINDE HASTA 2000M2,,7,3,Individual,0,16207.99,14093.9043,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero
+203,203,SR2 AMERIPOLYSH CUBETA,,,7,3,Individual,0,44505.74,38700.6435,0.15,ISV - 15%,1,1,0,0,1,1,1,costo_cero
+204,204,Decco Oxytop kit,,,13,,Individual,0,12501.16,10870.5739,0.15,ISV - 15%,5,1,0,0,1,1,1,costo_cero;sin_marca
+206,206,MOLDE USADO CERAMIC TILE RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,11,1,-2147483648,2147483647,1,0,1,costo_cero
+207,207,MOLDE USADO EUROPEAN FAN RIGIDO,,,19,1,Individual,0,10441.75,9079.7826,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,costo_cero
+208,208,MOLDE USADO CERAMIC WEAVE RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,9,1,-2147483648,2147483647,1,0,1,costo_cero
+209,209,MOLDE USADO HEXAGON RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,17,1,-2147483648,2147483647,1,0,1,costo_cero
+210,210,MOLDE USADO PROLINE NAT BRICK RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,6,1,-2147483648,2147483647,1,0,1,costo_cero
+211,211,MOLDE USADO BANDA GRANDE RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+212,212,MOLDE USADO FRESH BRICK RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,costo_cero
+213,213,MOLDE USADO WATERDROP RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,costo_cero
+214,214,MOLDE USADO COBBLESTONE RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,7,1,-2147483648,2147483647,1,0,1,costo_cero
+215,215,MOLDE USADO ASHLAR SLATE RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,costo_cero
+216,216,MOLDE USADO RODILLO PEQUENO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+217,217,MOLDE USADO RODILLO GRANDE,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+219,219,MOLDE USADO BORDE DELGADO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,costo_cero
+220,220,MOLDE USADO LARGE TILE CUADRO RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,3,1,-2147483648,2147483647,1,0,1,costo_cero
+221,221,MOLDE USADO RED TILE RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,costo_cero
+222,222,MOLDE USADO TILE 2 RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,costo_cero
+223,223,MOLDE USADO RANDOM STONE RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,costo_cero
+224,224,MOLDE USADO BANDA GRANDE 2 RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,costo_cero
+225,225,MOLDE USADO OCEAN,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+226,226,MOLDE USADO OCEAN PELLEJO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,costo_cero
+227,227,MOLDE USADO SAND PELLEJO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,6,1,-2147483648,2147483647,1,0,1,costo_cero
+228,228,MOLDE USADO TIPO MADERA PEQUENO RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero
+229,229,MOLDE USADO TIPO MADERA MEDIANO RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero
+230,230,MOLDE USADO TIPO MADERA GRANDE RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,costo_cero
+231,231,Dia de Alquiler de Moldes Usados,,,19,3,Individual,0,1480,1286.9565,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero
+232,232,MOLDE USADO LARGE TILE RECTANGULO RIGIDO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,3,1,-2147483648,2147483647,1,0,1,costo_cero
+233,233,MOLDE ASHLAR SLATE 59X59CM RIGIDO,NUEVO,,4,2,Individual,1632,4173.71,3629.313,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+235,235,MOLDE USADO CERAMIC TILE FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,costo_cero
+236,236,MOLDE USADO EUROPEAN FAN FLEX,,,19,1,Individual,0,10441.75,9079.7826,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+237,237,MOLDE USADO CERAMIC WEAVE FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+238,238,MOLDE USADO HEXAGON FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,costo_cero
+239,239,MOLDE USADO PROLINE NAT BRICK FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+240,240,MOLDE USADO BANDA GRANDE FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+241,241,MOLDE USADO ASHLAR SLATE FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+242,242,MOLDE USADO BANDA GRANDE 2 FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+243,243,MOLDE USADO RED TILE FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+244,244,MOLDE USADO TILE 2 FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+245,245,MOLDE USADO RANDOM STONE FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+246,246,MOLDE USADO TIPO MADERA PEQUENO FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+247,247,MOLDE USADO TIPO MADERA MEDIANO FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+248,248,MOLDE USADO TIPO MADERA GRANDE FLEX,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,costo_cero
+249,249,MOLDE USADO BANDA PEQUENA,,,19,1,Individual,0,0,0.0,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,costo_cero;precio_cero
+250,250,Epóxico Autonivelante Topcoat Kit 5:1 Gris,24m2,E8300,21,6,Individual,3320.2,8491.15,7383.6087,0.15,ISV - 15%,8,1,-2147483648,2147483647,1,0,1,
+251,251,Epóxico Autonivelante Topcoat Kit 5:1 Blanco,10m2,E8300,21,6,Individual,3320.2,8491.15,7383.6087,0.15,ISV - 15%,7,1,-2147483648,2147483647,1,0,1,
+252,252,Epóxico Autonivelante Topcoat Kit 5:1 Amarillo,10m2,E8300,21,6,Individual,3320.2,8491.15,7383.6087,0.15,ISV - 15%,7,1,-2147483648,2147483647,1,0,1,
+253,253,Epóxico Autonivelante Topcoat Kit 5:1 Verde,10m2,E8300,21,6,Individual,3320.2,8491.15,7383.6087,0.15,ISV - 15%,7,1,-2147483648,2147483647,1,0,1,
+254,254,POLIURETANO LIBRE DE SOLVENTE KIT GRIS 5:2:1,100M2,PU3600,21,6,Individual,4049.21,10355.54,9004.8174,0.15,ISV - 15%,15,1,-2147483648,2147483647,1,0,1,
+255,255,CEMENT GLUE CUBETA 25KG,,,7,5,Individual,1923.57,4919.38,4277.7217,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,
+256,256,STAIN RESISTOR CUBETA,,,7,5,Individual,2051.81,5247.34,4562.9043,0.15,ISV - 15%,3,1,-2147483648,2147483647,1,0,1,
+257,257,"FELPA P/BURNISH 27""",,,7,2,Individual,938,1827.7,1589.3043,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,
+258,258,MOLDE MAJESTIC 90X90CM FLEX,6KG,YX044,4,2,Individual,2448.18,6261.02,5444.3652,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,
+259,259,MOLDE EUROPEAN FAN 64X113CM FLEX,6KG,YX228,4,2,Individual,2448.18,6261.02,5444.3652,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+260,260,MOLDE FRESH BRICK 107X120CM FLEX,6KG,YX334,4,2,Individual,3264.24,8348.04,7259.1652,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+261,261,MOLDE RANDOM STONE 74X74CM FLEX,6KG,YX145,4,2,Individual,1632.12,4174.02,3629.5826,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,
+262,262,MOLDE ASHLAR SLATE 59X59CM FLEX,NUEVO,,4,2,Individual,1632,4173.71,3629.313,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+263,263,MOLDE USADO DELFIN PELLEJO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero
+264,264,MOLDE USADO UVAS PELLEJO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero
+265,265,MOLDE USADO 1 TIRA MADERA PELLEJO,,,19,1,Individual,0,10401.75,9045.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero
+266,266,MOLDE PELLEJO TEXTURA,,,4,1,Individual,1632.12,4174.02,3629.5826,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+267,267,LIBRA CHIPS COYOTE 1/4,CAJA TRAE 40LBS,,21,4,Individual,3484,8485.8,7378.9565,0.15,ISV - 15%,103.975,1,-2147483648,2147483647,1,0,1,
+268,268,LIBRA CHIPS ORBIT 1/4,CAJA TRAE 40 LIBRAS,,21,4,Individual,3484,8485.8,7378.9565,0.15,ISV - 15%,218.975,1,-2147483648,2147483647,1,0,1,
+269,269,LIBRA CHIPS DOMINO 1/4,CAJA TRAE 40 LIBRAS,,21,4,Individual,3484,8485.8,7378.9565,0.15,ISV - 15%,235.475,1,-2147483648,2147483647,1,0,1,
+270,270,LIBRA CHIPS FEATHER GRAY 1/4,CAJA TRAE 40 LIBRAS,,21,4,Individual,3484,8485.8,7378.9565,0.15,ISV - 15%,220.975,1,-2147483648,2147483647,1,0,1,
+271,271,LIBRA CHIPS CREEKBED 1/4,CAJA TRAE 40 LIBRAS,,21,4,Individual,3484,8485.8,7378.9565,0.15,ISV - 15%,127.975,1,-2147483648,2147483647,1,0,1,
+272,272,LIBRA CHIPS TIDAL WAVE 1/4,CAJA TRAE 40 LIBRAS,,21,4,Individual,3484,8485.8,7378.9565,0.15,ISV - 15%,107.975,1,-2147483648,2147483647,1,0,1,
+273,273,LIBRA CHIPS SHORELINE 1/4,CAJA TRAE 40 LIBRAS,,21,4,Individual,3484,8485.8,7378.9565,0.15,ISV - 15%,104.975,1,-2147483648,2147483647,1,0,1,
+274,274,LIBRA CHIPS STONEWASH 1/16,CAJA TRAE 40 LIBRAS,,21,4,Individual,3484,8485.77,7378.9304,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+275,275,LIBRA CHIPS CREEKBED 1/16,CAJA TRAE 40 LIBRAS,,21,4,Individual,3484,8485.77,7378.9304,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+276,276,TONER CHARCOAL,,,11,1,Individual,3296.4,4014.42,3490.8,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,
+277,277,"Indutape Amarilla 2"" Rollo 30ml",,,7,4,Individual,920.98,2854.08,2481.8087,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,
+278,278,"Indutape Amarilla 4"" Rollo 30ml",,,7,4,Individual,1799.22,4820.48,4191.7217,0.15,ISV - 15%,5,1,-2147483648,2147483647,1,0,1,
+279,279,"Indutape Cebra 3"" Rollo 30ml",,,7,4,Individual,2477.33,5128.8,4459.8261,0.15,ISV - 15%,12,1,-2147483648,2147483647,1,0,1,
+280,280,"Indutape Azul 2"" Rollo 30ml",,,7,4,Individual,920.98,2854.08,2481.8087,0.15,ISV - 15%,30,1,-2147483648,2147483647,1,0,1,
+281,281,Magic Squeegee - Espátula,,,3,2,Individual,0,3959.62,3443.1478,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero
+282,282,Cutting Shroud - Protector de Corte,,,3,2,Individual,1527.33,3720.03,3234.8087,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,
+283,283,Pulidora de Orillas,,,3,2,Individual,12473.66,22786.01,19813.9217,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,
+284,284,LLANA DE MANO CURVA GRANDE,,,3,,Individual,0,720.1,626.1739,0.15,ISV - 15%,7,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+285,285,LLANA DE MANO CURVA MEDIANA,,,3,,Individual,0,614.2,534.087,0.15,ISV - 15%,2,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+286,286,LLANA DE MANO CURVA PEQUEÑA,,,3,,Individual,0,476.54,414.3826,0.15,ISV - 15%,4,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+287,287,Pumast 600 Salchicha 600 ml,,,22,,Individual,0,273.86,238.1391,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+288,288,PUR 625 Lata de 25 kg,,,22,,Individual,0,7099.27,6173.2783,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+289,289,PUR 220 UV Kit 20 Kg,,,22,,Individual,0,12918.31,11233.313,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+290,290,Epox 305 Kit 1 Kg,,,22,,Individual,0,453.33,394.2,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+291,291,Epox 305 Kit 5 Kg,,,22,,Individual,0,1962.46,1706.487,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+292,292,Epox 311 Kit 1 Kg,,,22,,Individual,0,732.73,637.1565,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+293,293,Epox 311 Kit 7.5 Kg,,,22,,Individual,0,4837.63,4206.6348,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+294,294,Selfing 600 Bolsa 25 Kg,,,22,,Individual,0,903.61,785.7478,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+295,295,Epox PR 300 Kit 20 Kg,,,22,,Individual,0,14002.06,12175.7043,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;existencia_negativa_a_cero;sin_marca
+296,296,"Epox FL 700 gris 7035, Kit 20 Kg",,,22,,Individual,0,10349.86,8999.8783,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+297,297,Epox FL 700 rojo 300G Kit 20 Kg,,,22,,Individual,0,11169.09,9712.2522,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+298,298,Epox FL 700 amarillo 1023 Kit 20 Kg,,,22,,Individual,0,11371.74,9888.4696,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+299,299,Epox FL 700 blanco G003 Kit 20 Kg,,,22,,Individual,0,11085.06,9639.1826,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+300,300,Epox SL 800 gris 7035 Kit 15 Kg,,,22,,Individual,0,9267.82,8058.9739,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+301,301,Epox SL 800 blanco G010 kit 15 Kg,,,22,,Individual,0,9844.86,8560.7478,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+302,302,Epox SL 800 negro G005 Kit 15 Kg,,,22,,Individual,0,10293.55,8950.913,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+303,303,Purself 201 Kit 20 Kg,,,22,,Individual,0,7538.38,6555.113,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+304,304,Fibermesh m2,,,22,,Individual,0,39.13,34.0261,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;sin_marca
+305,305,SIMGUARD 5GAL,,,21,,Individual,8902.96,19452.97,16915.6261,0.15,ISV - 15%,1,1,-2147483648,2147483647,1,0,1,sin_marca
+306,306,REBAJA DE DAÑOS A MUEBLE 60%,,,2,,Individual,0,0,0.0,0.15,ISV - 15%,0,1,-2147483648,2147483647,1,0,1,costo_cero;precio_cero;sin_marca
