@@ -6,7 +6,7 @@ import { montoEnLetras } from './numeroLetras.js';
 import { EMPRESA } from './empresa.js';
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const LOGO = fileURLToPath(new URL('../assets/logo.png', import.meta.url));
+const logoDe = (codigo) => fileURLToPath(new URL(`../assets/${codigo}-logo.png`, import.meta.url));
 const lempiras = (n) => `L ${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fechaLarga = (iso) => {
   const [a, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Tegucigalpa' }).format(new Date(iso)).split('-');
@@ -23,22 +23,24 @@ export function generarPdfFactura(venta, res) {
   const pe = venta.puntos_emision;
   const borrador = !!pe?.es_borrador;
 
-  // Logo (si existe backend/assets/logo.png) o nombre de marca en texto.
-  if (existsSync(LOGO)) doc.image(LOGO, izq, 34, { fit: [130, 70] });
-  else doc.font('Helvetica-Bold').fontSize(20).fillColor('#3f5433').text(EMPRESA.marca.toUpperCase(), izq, 48, { width: 150 }).fillColor('black');
+  // Datos de la empresa que emite (EcoStone o DISERCO, según la sucursal de la factura).
+  const emp = venta.empresa_datos ?? { codigo: 'ecostone', nombre: EMPRESA.marca, razon_social: EMPRESA.razonSocial, rtn: EMPRESA.rtn, direccion: EMPRESA.direccion, ciudad: EMPRESA.ciudad, telefono: EMPRESA.telefono, correo: EMPRESA.correo, color: '#3f5433' };
+  const logo = logoDe(emp.codigo);
+  if (existsSync(logo)) doc.image(logo, izq, 34, { fit: [90, 90] });
+  else doc.font('Helvetica-Bold').fontSize(20).fillColor(emp.color || '#3f5433').text(String(emp.nombre).toUpperCase(), izq, 48, { width: 150 }).fillColor('black');
 
   // Datos del emisor (centro)
-  doc.font('Helvetica-Bold').fontSize(13).text(EMPRESA.razonSocial.toUpperCase(), 190, 34, { width: 230, align: 'center' });
+  doc.font('Helvetica-Bold').fontSize(13).text(String(emp.razon_social).toUpperCase(), 140, 34, { width: 290, align: 'center' });
   doc.font('Helvetica').fontSize(8);
-  doc.text(`${EMPRESA.direccion} ${EMPRESA.ciudad}`, 190, 52, { width: 230, align: 'center' });
-  doc.text(`Teléfono: ${EMPRESA.telefono}`, { width: 230, align: 'center' });
-  doc.text(`RTN: ${EMPRESA.rtn}`, { width: 230, align: 'center' });
-  doc.text(EMPRESA.correo, { width: 230, align: 'center' });
-  if (!borrador && pe?.cai) doc.text(`CAI: ${pe.cai}`, { width: 230, align: 'center' });
+  doc.text(`${emp.direccion ?? ''} ${emp.ciudad ?? ''}`, 140, doc.y + 2, { width: 290, align: 'center' });
+  if (emp.telefono) doc.text(`Teléfono: ${emp.telefono}`, { width: 290, align: 'center' });
+  doc.text(`RTN: ${emp.rtn || '[PENDIENTE]'}`, { width: 290, align: 'center' });
+  if (emp.correo) doc.text(emp.correo, { width: 290, align: 'center' });
+  if (!borrador && pe?.cai) doc.text(`CAI: ${pe.cai}`, { width: 290, align: 'center' });
 
   // Número, fecha y rango autorizado (derecha)
   doc.font('Helvetica-Bold').fontSize(9).text('Número de Factura #', 430, 34, { width: 142 });
-  doc.fontSize(9.5).text(venta.numero_factura ?? '', { width: 142 });
+  doc.fontSize((venta.numero_factura ?? '').length > 22 ? 7.5 : 9.5).text(venta.numero_factura ?? '', { width: 142 });
   doc.font('Helvetica').fontSize(8.5).text(`Fecha: ${fechaLarga(venta.fecha_emision)}`, 430, 66, { width: 142 });
   if (!borrador && pe) {
     const prefijo = `${pe.punto_emision_codigo}-${pe.punto_venta_codigo}-${pe.tipo_documento_codigo}-`;

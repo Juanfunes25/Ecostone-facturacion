@@ -35,7 +35,7 @@ function camposFabrica(body) {
 }
 
 productos.get('/', async (req, res) => {
-  let query = db.from('productos').select('*, categorias(id, nombre)').order('nombre');
+  let query = db.from('productos').select('*, categorias(id, nombre)').eq('empresa', req.empresa).order('nombre');
   if (req.query.categoria_id) query = query.eq('categoria_id', req.query.categoria_id);
   if (req.query.incluirInactivos !== 'true') query = query.eq('activo', true);
   const { data, error } = await query;
@@ -59,6 +59,7 @@ productos.post('/', requireRole('admin', 'gerente'), async (req, res) => {
   const { data, error } = await db
     .from('productos')
     .insert({
+      empresa: req.empresa,
       codigo,
       codigo_barras,
       nombre,

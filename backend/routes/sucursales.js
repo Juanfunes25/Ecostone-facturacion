@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { registrarAuditoria } from '../lib/auditoria.js';
+import { olvidarEmpresas } from '../lib/empresas.js';
 
 export const sucursales = Router();
 
@@ -17,7 +18,9 @@ async function colorEnUso(color, excepto) {
 }
 
 sucursales.get('/', async (req, res) => {
-  const { data, error } = await db.from('sucursales').select('*').eq('activo', true).order('nombre');
+  let query = db.from('sucursales').select('*').eq('activo', true).order('nombre');
+  if (!(req.query.todas === '1' && req.perfil.rol === 'admin')) query = query.eq('empresa', req.empresa);
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
@@ -37,9 +40,10 @@ sucursales.post('/', requireRole('admin'), async (req, res) => {
     if (otra) return res.status(409).json({ error: `Ese color ya lo usa "${otra.nombre}" — elige otro.` });
   }
 
+  olvidarEmpresas();
   const { data: sucursal, error } = await db
     .from('sucursales')
-    .insert({ nombre, alias, direccion, color: color ?? null })
+    .insert({ nombre, alias, direccion, color: color ?? null, empresa: req.empresa })
     .select()
     .single();
   if (error) {

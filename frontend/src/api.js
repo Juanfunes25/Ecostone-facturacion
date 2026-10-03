@@ -1,4 +1,5 @@
 import { idDispositivo } from './lib/dispositivo.js';
+import { empresaActiva } from './lib/empresa.js';
 
 async function llamar(method, path, session, body) {
   let res;
@@ -9,6 +10,7 @@ async function llamar(method, path, session, body) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
         'X-Dispositivo': idDispositivo(),
+        'X-Empresa': empresaActiva(),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
@@ -31,11 +33,12 @@ const memoria = new Map();
 const TTL = 5 * 60 * 1000;
 
 function enMemoria(path, session) {
-  const hit = memoria.get(path);
+  const clave = `${empresaActiva()}|${path}`;
+  const hit = memoria.get(clave);
   if (hit && Date.now() - hit.ts < TTL) return hit.promesa;
   const promesa = llamar('GET', path, session);
-  memoria.set(path, { ts: Date.now(), promesa });
-  promesa.catch(() => memoria.delete(path));
+  memoria.set(clave, { ts: Date.now(), promesa });
+  promesa.catch(() => memoria.delete(clave));
   return promesa;
 }
 
@@ -51,6 +54,7 @@ export const api = {
   post: escribir('POST'),
   put: escribir('PUT'),
   del: (path, session) => { memoria.clear(); return llamar('DELETE', path, session); },
+  limpiarCache: () => memoria.clear(),
   // Calienta la memoria apenas se entra, para que cotizar/vender abra al instante.
   precargar(session, rol) {
     if (rol === 'produccion') return;

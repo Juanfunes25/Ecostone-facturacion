@@ -27,6 +27,7 @@ import { catalogoFabrica } from './routes/catalogoFabrica.js';
 import { registroProduccion } from './routes/registroProduccion.js';
 import { reporteProduccion } from './routes/reporteProduccion.js';
 import { trazabilidad } from './routes/trazabilidad.js';
+import { todasLasEmpresas } from './lib/empresas.js';
 import { iniciarLiberacionAutomatica } from './lib/colada.js';
 import { antifraude } from './routes/antifraude.js';
 import { requireRole } from './middleware/requireRole.js';
@@ -80,7 +81,10 @@ app.use('/api', (req, res, next) => {
 });
 
 // Perfil propio: sucursal, rol y flags (cierre ciego, sin horario)
-app.get('/api/perfil', (req, res) => res.json(req.perfil));
+app.get('/api/perfil', async (req, res) => {
+  const todas = await todasLasEmpresas();
+  res.json({ ...req.perfil, empresa_activa: req.empresa, empresas_info: todas.filter((e) => (req.perfil.empresas ?? ['ecostone']).includes(e.codigo)) });
+});
 
 app.get('/api/formas-pago', async (req, res) => {
   const { data, error } = await db.from('formas_pago').select('*').order('nombre');

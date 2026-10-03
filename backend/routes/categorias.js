@@ -5,7 +5,7 @@ import { requireRole } from '../middleware/requireRole.js';
 export const categorias = Router();
 
 categorias.get('/', async (req, res) => {
-  const { data, error } = await db.from('categorias').select('*').order('orden');
+  const { data, error } = await db.from('categorias').select('*').eq('empresa', req.empresa).order('orden');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
@@ -15,7 +15,7 @@ categorias.post('/', requireRole('admin', 'gerente'), async (req, res) => {
   if (!nombre) return res.status(400).json({ error: 'nombre es obligatorio' });
   const { data, error } = await db
     .from('categorias')
-    .insert({ nombre, orden: orden ?? 0 })
+    .insert({ nombre, orden: orden ?? 0, empresa: req.empresa })
     .select()
     .single();
   if (error) return res.status(500).json({ error: error.message });

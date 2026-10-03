@@ -39,7 +39,8 @@ function calcularEstado(pe) {
 puntosEmision.get('/estado', requireRole('admin', 'gerente'), async (req, res) => {
   const { data, error } = await db
     .from('puntos_emision')
-    .select('*, sucursales(nombre, alias)')
+    .select('*, sucursales!inner(nombre, alias, empresa)')
+    .eq('sucursales.empresa', req.empresa)
     .eq('activo', true);
   if (error) return res.status(500).json({ error: error.message });
   res.json(data.map(calcularEstado));

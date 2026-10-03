@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { sucursalesDe } from '../lib/empresas.js';
 import { round2 } from '../lib/facturacion.js';
 import { traerPorIds, traerTodo } from '../lib/consultas.js';
 import { diaSemanaHn, fechaHn, filtrarRango, finDelDia, horaHn, inicioDelDia } from '../lib/fechas.js';
@@ -29,10 +30,11 @@ function redondearTodo(obj) {
   return obj;
 }
 
-async function ventasDelRango({ sucursal_id, fechaInicio, fechaFin }) {
+async function ventasDelRango({ sucursal_id, fechaInicio, fechaFin, idsEmpresa }) {
   return traerTodo(() => {
     let q = db.from('ventas').select(SELECT_VENTA).eq('estado', 'pagada');
     if (sucursal_id) q = q.eq('sucursal_id', sucursal_id);
+    else if (idsEmpresa) q = q.in('sucursal_id', idsEmpresa);
     q = filtrarRango(q, 'fecha_emision', fechaInicio, fechaFin);
     return q.order('fecha_emision', { ascending: true }).order('id', { ascending: true });
   });
@@ -351,7 +353,7 @@ reportes.get('/completo', async (req, res) => {
     const { sucursal_id, fechaInicio, fechaFin } = req.query;
     if (!fechaInicio || !fechaFin) return res.status(400).json({ error: 'Elige el rango de fechas' });
     if (fechaFin < fechaInicio) return res.status(400).json({ error: 'La fecha final es anterior a la inicial' });
-    const filtros = { sucursal_id: sucursal_id || null, fechaInicio, fechaFin };
+    const filtros = { sucursal_id: sucursal_id || null, fechaInicio, fechaFin, idsEmpresa: await sucursalesDe(req.empresa) };
     const anterior = rangoAnterior(fechaInicio, fechaFin);
 
     const [reporte, previo] = await Promise.all([

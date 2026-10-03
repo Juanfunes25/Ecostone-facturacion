@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { datosEmpresa, porEmpresa } from '../lib/empresas.js';
 import { descontarInventarioVenta, verificarInventarioVenta } from '../lib/inventarioVenta.js';
 import {
   calcularTotales,
@@ -309,6 +310,7 @@ ventas.get('/', async (req, res) => {
 
   if (estado) query = query.eq('estado', estado);
   if (sucursal_id) query = query.eq('sucursal_id', sucursal_id);
+  else query = await porEmpresa(req, query);
   query = filtrarRango(query, 'fecha_emision', fechaInicio, fechaFin);
   if (q) {
     // Además del No. de factura, busca por nombre del cliente — así no hay
@@ -363,13 +365,13 @@ ventas.post('/:id/reenviar-correo', async (req, res) => {
 export async function obtenerVentaCompleta(id) {
   const { data: venta, error } = await db
     .from('ventas')
-    .select('*, clientes(*), perfiles(nombre), sucursales(nombre, alias), puntos_emision(*), venta_pagos(monto, formas_pago(nombre))')
+    .select('*, clientes(*), perfiles(nombre), sucursales(nombre, alias, empresa), puntos_emision(*), venta_pagos(monto, formas_pago(nombre))')
     .eq('id', id)
     .single();
   if (error || !venta) return null;
 
   const { data: detalle } = await db.from('detalle_venta').select('*').eq('venta_id', venta.id);
-  return { ...venta, detalle };
+  return { ...venta, detalle, empresa_datos: await datosEmpresa(venta.sucursales?.empresa) };
 }
 
 ventas.get('/:id', async (req, res) => {

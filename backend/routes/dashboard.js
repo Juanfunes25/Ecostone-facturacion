@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { sucursalesDe } from '../lib/empresas.js';
 import { round2 } from '../lib/facturacion.js';
 import { traerPorIds, traerTodo } from '../lib/consultas.js';
 import { fechaHn, filtrarRango } from '../lib/fechas.js';
@@ -15,6 +16,7 @@ export const dashboard = Router();
 dashboard.get('/', async (req, res) => {
   try {
     const { sucursal_id, fechaInicio, fechaFin } = req.query;
+    const idsEmpresa = await sucursalesDe(req.empresa);
 
     // Fechas en hora de Honduras (fin de día incluido) y por páginas: antes
     // se perdía el último día del rango y todo lo que pasara de 1000 facturas.
@@ -24,7 +26,7 @@ dashboard.get('/', async (req, res) => {
         .select('id, sucursal_id, total, isv_total, cambio, fecha_emision, sucursales(nombre, alias)')
         .eq('estado', 'pagada')
         .eq('anulada', false);
-      if (sucursal_id) q = q.eq('sucursal_id', sucursal_id);
+      q = sucursal_id ? q.eq('sucursal_id', sucursal_id) : q.in('sucursal_id', idsEmpresa);
       q = filtrarRango(q, 'fecha_emision', fechaInicio, fechaFin);
       return q.order('fecha_emision').order('id');
     });

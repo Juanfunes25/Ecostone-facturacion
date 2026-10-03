@@ -65,9 +65,10 @@ export function etiquetaDescuento(venta) {
 
 export function formatearTicket(venta, ancho = 48, { copia = 0, leyendaGratis = false } = {}) {
   const L = [];
-  L.push(centrar(EMPRESA.razonSocial.toUpperCase(), ancho));
-  L.push(centrar(EMPRESA.marca.toUpperCase(), ancho));
-  L.push(centrar(`RTN ${EMPRESA.rtn}`, ancho));
+  const emp = venta.empresa_datos;
+  for (const r of ajustar((emp?.razon_social ?? EMPRESA.razonSocial).toUpperCase(), ancho)) L.push(centrar(r, ancho));
+  L.push(centrar((emp?.nombre ?? EMPRESA.marca).toUpperCase(), ancho));
+  if (emp ? emp.rtn : EMPRESA.rtn) L.push(centrar(`RTN ${emp?.rtn ?? EMPRESA.rtn}`, ancho));
   for (const r of ajustar(venta.sucursales?.nombre ?? '', ancho)) L.push(centrar(r, ancho));
   L.push(linea('-', ancho));
 

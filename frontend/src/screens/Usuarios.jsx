@@ -14,9 +14,26 @@ const VACIO = {
   sucursal_id: '',
   cierre_ciego: false,
   sin_horario: false,
+  empresas: ['ecostone'],
 };
 
-export default function Usuarios({ session, sucursales }) {
+const EMPRESAS = [['ecostone', 'EcoStone'], ['diserco', 'DISERCO']];
+
+function SelectorEmpresas({ valor, onCambiar }) {
+  return (
+    <span style={{ display: 'inline-flex', gap: 10, color: 'var(--text-dim)' }}>
+      {EMPRESAS.map(([codigo, nombre]) => (
+        <label key={codigo} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <input type="checkbox" style={{ width: 'auto' }} checked={(valor ?? []).includes(codigo)} onChange={(e) => { const lista = e.target.checked ? [...(valor ?? []), codigo] : (valor ?? []).filter((c) => c !== codigo); if (lista.length) onCambiar(lista); }} />
+          {nombre}
+        </label>
+      ))}
+    </span>
+  );
+}
+
+export default function Usuarios({ session }) {
+  const [sucursales, setSucursales] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [rolFiltro, setRolFiltro] = useState('');
@@ -39,6 +56,7 @@ export default function Usuarios({ session, sucursales }) {
 
   useEffect(() => {
     cargar().catch((e) => setError(e.message));
+    api.get('/sucursales?todas=1', session).then(setSucursales).catch(() => {});
   }, []);
 
   async function crear() {
@@ -120,6 +138,7 @@ export default function Usuarios({ session, sucursales }) {
               </option>
             ))}
           </select>
+          <SelectorEmpresas valor={form.empresas} onCambiar={(empresas) => setForm({ ...form, empresas })} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-dim)' }}>
             <input
               type="checkbox"
@@ -178,6 +197,7 @@ export default function Usuarios({ session, sucursales }) {
               <th>Usuario / correo</th>
               <th>Rol</th>
               <th>Sucursal</th>
+              <th>Empresas</th>
               <th>Cierre ciego</th>
               <th>Activo</th>
               <th></th>
@@ -198,6 +218,7 @@ export default function Usuarios({ session, sucursales }) {
                   )}
                   {u.sucursales?.nombre ?? 'Todas'}
                 </td>
+                <td><SelectorEmpresas valor={u.empresas} onCambiar={(empresas) => actualizar(u, { empresas })} /></td>
                 <td>{u.cierre_ciego ? 'Sí' : 'No'}</td>
                 <td>{u.activo ? 'Sí' : 'No'}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>

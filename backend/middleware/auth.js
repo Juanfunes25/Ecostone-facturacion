@@ -1,5 +1,6 @@
 import { db } from '../db.js';
 import { vigilarDispositivo } from '../lib/antifraude.js';
+import { empresaDeLaPeticion } from '../lib/empresas.js';
 
 // Verifica el JWT de Supabase Auth (enviado por el frontend en Authorization:
 // Bearer <token>) y adjunta el perfil (sucursal, rol, flags) a req.perfil.
@@ -26,6 +27,7 @@ export async function requireAuth(req, res, next) {
   const recordada = sesiones.get(token);
   if (recordada && recordada.hasta > Date.now()) {
     req.perfil = recordada.perfil;
+    req.empresa = empresaDeLaPeticion(req);
     vigilarDispositivo(req).catch(() => {});
     return next();
   }
@@ -49,6 +51,7 @@ export async function requireAuth(req, res, next) {
   }
 
   req.perfil = perfil;
+  req.empresa = empresaDeLaPeticion(req);
   if (sesiones.size > 500) sesiones.clear();
   sesiones.set(token, { perfil, hasta: Math.min(Date.now() + VIGENCIA_MS, vencimientoToken(token) || 0) });
   // Dispositivo nuevo / uso simultáneo: nunca frena la petición.

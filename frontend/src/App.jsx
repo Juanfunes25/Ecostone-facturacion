@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabaseClient.js';
 import { api } from './api.js';
 import { colorSucursal, nombreCortoSucursal, registrarColoresSucursales } from './lib/coloresSucursal.js';
+const SelectorEmpresa = lazy(() => import('./screens/SelectorEmpresa.jsx'));
 const Pos = lazy(() => import('./screens/Pos.jsx'));
 const Facturas = lazy(() => import('./screens/Facturas.jsx'));
 const Piedra = lazy(() => import('./screens/Piedra.jsx'));
@@ -22,6 +23,7 @@ const Sucursales = lazy(() => import('./screens/Sucursales.jsx'));
 const Dashboard = lazy(() => import('./screens/Dashboard.jsx'));
 const Impresora = lazy(() => import('./screens/Impresora.jsx'));
 const Bitacora = lazy(() => import('./screens/Bitacora.jsx'));
+import { empresaActiva, fijarEmpresa } from './lib/empresa.js';
 import { useConexionEnVivo } from './lib/tiempoReal.js';
 import Icono, { IsotipoEcoStone } from './components/Icono.jsx';
 import { accesoAEmail, claveInterna } from './lib/acceso.js';
@@ -94,27 +96,27 @@ function PantallaLogin({ onEntrar }) {
 }
 
 const PANTALLAS = [
-  { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], Componente: Cotizaciones },
-  { id: 'pos', etiqueta: 'Venta Directa', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], Componente: Pos },
-  { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], Componente: Facturas },
-  { id: 'cierres', etiqueta: 'Cierre de caja', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], Componente: Cierres },
-  { id: 'registrar-produccion', etiqueta: 'Registrar producción', grupo: 'Fabricación', roles: ['produccion', 'admin', 'gerente'], Componente: RegistrarProduccion },
-  { id: 'trazabilidad', etiqueta: 'Trazabilidad de lotes', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], Componente: Trazabilidad },
-  { id: 'reporte-produccion', etiqueta: 'Reporte de producción', grupo: 'Fabricación', roles: ['admin', 'gerente'], Componente: ReporteProduccion },
-  { id: 'produccion', etiqueta: 'Órdenes y agenda', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], Componente: Fabricacion },
-  { id: 'recetas', etiqueta: 'Recetas y costos', grupo: 'Fabricación', roles: ['admin', 'gerente'], Componente: Recetas },
-  { id: 'insumos', etiqueta: 'Insumos', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], Componente: Insumos },
-  { id: 'inventario', etiqueta: 'Inventario de piedra', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega', 'vendedor', 'ventas'], Componente: Inventario },
-  { id: 'dashboard', etiqueta: 'Dashboard', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Dashboard },
-  { id: 'reportes', etiqueta: 'Reportes', grupo: 'Negocio', roles: ['admin', 'gerente'], Componente: Reportes },
-  { id: 'catalogo', etiqueta: 'Catálogo de piedra', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor'], Componente: Piedra },
-  { id: 'clientes', etiqueta: 'Clientes', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'ventas'], Componente: Clientes },
-  { id: 'antifraude', etiqueta: 'Antifraude', grupo: 'Control', roles: ['admin'], Componente: Antifraude },
-  { id: 'bitacora', etiqueta: 'Bitácora', grupo: 'Control', roles: ['admin'], Componente: Bitacora },
-  { id: 'puntos-emision', etiqueta: 'CAI / Emisión', grupo: 'Control', roles: ['admin', 'gerente'], Componente: PuntosEmision },
-  { id: 'usuarios', etiqueta: 'Usuarios', grupo: 'Control', roles: ['admin'], Componente: Usuarios },
-  { id: 'sucursales', etiqueta: 'Planta / sucursal', grupo: 'Control', roles: ['admin'], Componente: Sucursales },
-  { id: 'impresora', etiqueta: 'Impresora', grupo: 'Ajustes', roles: ['admin', 'gerente', 'cajero', 'ventas'], Componente: Impresora },
+  { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], empresas: ['ecostone'], Componente: Cotizaciones },
+  { id: 'pos', etiqueta: 'Venta Directa', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], empresas: ['ecostone'], Componente: Pos },
+  { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], empresas: ['diserco', 'ecostone'], Componente: Facturas },
+  { id: 'cierres', etiqueta: 'Cierre de caja', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero'], empresas: ['diserco', 'ecostone'], Componente: Cierres },
+  { id: 'registrar-produccion', etiqueta: 'Registrar producción', grupo: 'Fabricación', roles: ['produccion', 'admin', 'gerente'], empresas: ['ecostone'], Componente: RegistrarProduccion },
+  { id: 'trazabilidad', etiqueta: 'Trazabilidad de lotes', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], empresas: ['ecostone'], Componente: Trazabilidad },
+  { id: 'reporte-produccion', etiqueta: 'Reporte de producción', grupo: 'Fabricación', roles: ['admin', 'gerente'], empresas: ['ecostone'], Componente: ReporteProduccion },
+  { id: 'produccion', etiqueta: 'Órdenes y agenda', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], empresas: ['ecostone'], Componente: Fabricacion },
+  { id: 'recetas', etiqueta: 'Recetas y costos', grupo: 'Fabricación', roles: ['admin', 'gerente'], empresas: ['ecostone'], Componente: Recetas },
+  { id: 'insumos', etiqueta: 'Insumos', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega'], empresas: ['ecostone'], Componente: Insumos },
+  { id: 'inventario', etiqueta: 'Inventario de piedra', grupo: 'Fabricación', roles: ['admin', 'gerente', 'bodega', 'vendedor', 'ventas'], empresas: ['ecostone'], Componente: Inventario },
+  { id: 'dashboard', etiqueta: 'Dashboard', grupo: 'Negocio', roles: ['admin', 'gerente'], empresas: ['diserco', 'ecostone'], Componente: Dashboard },
+  { id: 'reportes', etiqueta: 'Reportes', grupo: 'Negocio', roles: ['admin', 'gerente'], empresas: ['diserco', 'ecostone'], Componente: Reportes },
+  { id: 'catalogo', etiqueta: 'Catálogo de piedra', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor'], empresas: ['ecostone'], Componente: Piedra },
+  { id: 'clientes', etiqueta: 'Clientes', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'ventas'], empresas: ['diserco', 'ecostone'], Componente: Clientes },
+  { id: 'antifraude', etiqueta: 'Antifraude', grupo: 'Control', roles: ['admin'], empresas: ['diserco', 'ecostone'], Componente: Antifraude },
+  { id: 'bitacora', etiqueta: 'Bitácora', grupo: 'Control', roles: ['admin'], empresas: ['diserco', 'ecostone'], Componente: Bitacora },
+  { id: 'puntos-emision', etiqueta: 'CAI / Emisión', grupo: 'Control', roles: ['admin', 'gerente'], empresas: ['diserco', 'ecostone'], Componente: PuntosEmision },
+  { id: 'usuarios', etiqueta: 'Usuarios', grupo: 'Control', roles: ['admin'], empresas: ['diserco', 'ecostone'], Componente: Usuarios },
+  { id: 'sucursales', etiqueta: 'Planta / sucursal', grupo: 'Control', roles: ['admin'], empresas: ['diserco', 'ecostone'], Componente: Sucursales },
+  { id: 'impresora', etiqueta: 'Impresora', grupo: 'Ajustes', roles: ['admin', 'gerente', 'cajero', 'ventas'], empresas: ['diserco', 'ecostone'], Componente: Impresora },
 ];
 
 const GRUPOS = ['Operación', 'Fabricación', 'Negocio', 'Control', 'Ajustes'];
@@ -181,6 +183,7 @@ function PantallaApp({ session, onSalir }) {
   const [tema, setTema] = useState(() => leerPreferencia('tema', 'claro'));
   const [compacta, setCompacta] = useState(() => leerPreferencia('barra-compacta', window.innerWidth < 1500 ? '1' : '0') === '1');
   const [menuMovil, setMenuMovil] = useState(false);
+  const [empresa, setEmpresa] = useState(() => empresaActiva());
 
   function cambiarTema() {
     const nuevo = tema === 'oscuro' ? 'claro' : 'oscuro';
@@ -277,15 +280,38 @@ function PantallaApp({ session, onSalir }) {
     setTimeout(onSalir, 150);
   }
 
+  // Carga el perfil y las sucursales de la empresa activa. Quien tiene una sola
+  // empresa entra directo; quien tiene las dos elige en el selector.
   useEffect(() => {
     Promise.all([api.get('/perfil', session), api.get('/sucursales', session)])
       .then(([perfil, sucursales]) => {
+        const propias = perfil.empresas ?? ['ecostone'];
+        const elegida = empresaActiva() && propias.includes(empresaActiva()) ? empresaActiva() : propias.length === 1 ? propias[0] : '';
+        if (elegida !== empresaActiva()) {
+          fijarEmpresa(elegida);
+          setEmpresa(elegida);
+          if (elegida) return; // el cambio de empresa vuelve a ejecutar esta carga
+        }
         setPerfil(perfil);
         fijarSucursales(sucursales);
-        setSucursalActivaId((actual) => actual || perfil.sucursal_id || sucursales[0]?.id || '');
+        setSucursalActivaId((actual) => (sucursales.some((x) => x.id === actual) ? actual : perfil.sucursal_id || sucursales[0]?.id || ''));
       })
       .catch((e) => setError(e.message));
-  }, [session]);
+  }, [session, empresa]);
+
+  function elegirEmpresa(codigo) {
+    fijarEmpresa(codigo);
+    api.limpiarCache();
+    setPantallaActiva('');
+    setSucursalActivaId('');
+    setEmpresa(codigo);
+  }
+
+  function cambiarDeEmpresa() {
+    fijarEmpresa('');
+    api.limpiarCache();
+    setEmpresa('');
+  }
 
   // Un cajero con sucursal fija (perfil.sucursal_id) NUNCA puede cambiarla
   // — así no hay forma de cobrar por error en otra sucursal. Sólo admin/
@@ -310,8 +336,8 @@ function PantallaApp({ session, onSalir }) {
   // varias ventanas abiertas.
   useEffect(() => {
     const corto = nombreCortoSucursal(sucursalActiva?.nombre);
-    document.title = corto ? `${corto} · EcoStone Facturación` : 'EcoStone Facturación';
-  }, [sucursalActiva?.nombre]);
+    document.title = corto ? `${corto} · ${empresa === 'diserco' ? 'DISERCO' : 'EcoStone'} Facturación` : 'EcoStone Facturación';
+  }, [sucursalActiva?.nombre, empresa]);
 
   if (error) {
     return (
@@ -332,7 +358,16 @@ function PantallaApp({ session, onSalir }) {
     );
   }
 
-  const pantallasVisibles = PANTALLAS.filter((p) => p.roles.includes(perfil.rol));
+  if (!empresa) {
+    return (
+      <Suspense fallback={<div className="pantalla"><p>Cargando…</p></div>}>
+        <SelectorEmpresa perfil={perfil} onElegir={elegirEmpresa} onSalir={onSalir} />
+      </Suspense>
+    );
+  }
+  const infoEmpresa = (perfil.empresas_info ?? []).find((e) => e.codigo === empresa);
+  const variasEmpresas = (perfil.empresas ?? []).length > 1;
+  const pantallasVisibles = PANTALLAS.filter((p) => p.roles.includes(perfil.rol) && p.empresas.includes(empresa));
   const actual = pantallasVisibles.find((p) => p.id === pantallaActiva) ?? pantallasVisibles[0];
   const Componente = actual.Componente;
   const puedeCambiarSucursal = !perfil.sucursal_id && sucursales.length > 1;
@@ -372,9 +407,9 @@ function PantallaApp({ session, onSalir }) {
       {menuMovil && <div className="sidebar-velo" onClick={() => setMenuMovil(false)} />}
       <aside className="sidebar">
         <div className="sidebar-marca">
-          <IsotipoEcoStone tam={28} color="#d8ccb0" />
+          {empresa === 'diserco' ? <img src="/diserco-logo.png" alt="" style={{ width: 30, height: 30, borderRadius: 4, objectFit: 'cover' }} /> : <IsotipoEcoStone tam={28} color="#d8ccb0" />}
           <span className="sidebar-marca-texto">
-            <strong>ECOSTONE</strong>
+            <strong>{(infoEmpresa?.nombre ?? 'EcoStone').toUpperCase()}</strong>
             <small>Facturación</small>
           </span>
           <button className="boton-icono sidebar-colapsar" onClick={alternarCompacta} title={compacta ? 'Expandir menú' : 'Compactar menú'}>
@@ -437,6 +472,12 @@ function PantallaApp({ session, onSalir }) {
 
         <div className="sidebar-pie">
           <IndicadorVivo />
+          {variasEmpresas && (
+            <button className="sidebar-item" onClick={cambiarDeEmpresa} title="Cambiar de empresa">
+              <Icono nombre="sucursales" />
+              <span className="sidebar-item-texto">Cambiar de empresa</span>
+            </button>
+          )}
           <button className="sidebar-item" onClick={cambiarTema} title={tema === 'oscuro' ? 'Modo claro' : 'Modo noche'}>
             <Icono nombre={tema === 'oscuro' ? 'sol' : 'luna'} />
             <span className="sidebar-item-texto">{tema === 'oscuro' ? 'Modo claro' : 'Modo noche'}</span>

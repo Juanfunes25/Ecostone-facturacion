@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { porEmpresa } from '../lib/empresas.js';
 import { round2 } from '../lib/facturacion.js';
 import { calcularCuadre, desgloseTurno, totalesPorForma } from '../lib/cierre.js';
 import { enviarResumenCierre } from '../lib/correo.js';
@@ -362,6 +363,7 @@ cierres.get('/', requireRole('admin', 'gerente'), async (req, res) => {
   const { sucursal_id, fechaInicio, fechaFin } = req.query;
   let query = db.from('cierres_caja').select(SELECT_CIERRE).order('fecha_fin', { ascending: false }).limit(200);
   if (sucursal_id) query = query.eq('sucursal_id', sucursal_id);
+  else query = await porEmpresa(req, query);
   if (fechaInicio) query = query.gte('fecha_inicio', fechaInicio);
   if (fechaFin) query = query.lte('fecha_fin', fechaFin);
   const { data, error } = await query;

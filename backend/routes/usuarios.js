@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { olvidarSesiones } from '../middleware/auth.js';
+import { todasLasEmpresas } from '../lib/empresas.js';
 import { db } from '../db.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { registrarAuditoria } from '../lib/auditoria.js';
@@ -7,6 +8,13 @@ import { accesoAEmail, accesoVisible, claveInterna } from '../lib/acceso.js';
 import { crearAlerta } from '../lib/alertas.js';
 
 export const usuarios = Router();
+
+// Empresas a las que puede entrar el usuario (por lo menos una, y que existan).
+async function empresasValidas(entrada) {
+  const existentes = new Set((await todasLasEmpresas()).map((e) => e.codigo));
+  const lista = [...new Set((Array.isArray(entrada) ? entrada : ['ecostone']).filter((c) => existentes.has(c)))];
+  return lista.length ? lista : ['ecostone'];
+}
 
 usuarios.get('/', requireRole('admin'), async (req, res) => {
   const { data, error } = await db.from('perfiles').select('*, sucursales(nombre)').order('nombre');
@@ -21,6 +29,7 @@ usuarios.get('/', requireRole('admin'), async (req, res) => {
 // depende del dashboard de Supabase para dar de alta a un cajero nuevo.
 usuarios.post('/', requireRole('admin'), async (req, res) => {
   const { acceso, password, nombre, rol, sucursal_id, cierre_ciego, sin_horario } = req.body;
+  const empresasPerfil = await empresasValidas(req.body.empresas);
   if (!String(acceso ?? '').trim() || !password || !String(nombre ?? '').trim()) {
     return res.status(400).json({ error: 'Usuario (o correo), contraseña y nombre son obligatorios' });
   }
@@ -53,6 +62,7 @@ usuarios.post('/', requireRole('admin'), async (req, res) => {
       nombre,
       rol: rol ?? 'cajero',
       sucursal_id: sucursal_id ?? null,
+      empresas: empresasPerfil,
       cierre_ciego: !!cierre_ciego,
       sin_horario: !!sin_horario,
     })
@@ -88,10 +98,11 @@ usuarios.post('/', requireRole('admin'), async (req, res) => {
 usuarios.put('/:id', requireRole('admin'), async (req, res) => {
   olvidarSesiones();
   const { nombre, rol, sucursal_id, cierre_ciego, sin_horario, activo } = req.body;
+  const empresasPerfil = req.body.empresas === undefined ? undefined : await empresasValidas(req.body.empresas);
   const { data: anterior } = await db.from('perfiles').select('*').eq('id', req.params.id).maybeSingle();
   const { data, error } = await db
     .from('perfiles')
-    .update({ nombre, rol, sucursal_id, cierre_ciego, sin_horario, activo })
+    .update({ nombre, rol, sucursal_id, cierre_ciego, sin_horario, activo, empresas: empresasPerfil })
     .eq('id', req.params.id)
     .select()
     .single();
@@ -99,7 +110,7 @@ usuarios.put('/:id', requireRole('admin'), async (req, res) => {
 
   if (anterior) {
     const cambios = {};
-    for (const campo of ['nombre', 'rol', 'sucursal_id', 'cierre_ciego', 'sin_horario', 'activo']) {
+    for (const campo of ['nombre', 'rol', 'sucursal_id', 'cierre_ciego', 'sin_horario', 'activo', 'empresas']) {
       if (String(anterior[campo]) !== String(data[campo])) cambios[campo] = { antes: anterior[campo], despues: data[campo] };
     }
     if (Object.keys(cambios).length > 0) {
