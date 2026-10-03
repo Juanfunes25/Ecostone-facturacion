@@ -4481,3 +4481,8 @@ table.tabla tbody tr:hover {
 .app-produccion { min-height: 100vh; background: var(--navy); border-top: 4px solid var(--color-sucursal); }
 .app-produccion-barra { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--sidebar); color: #fff; }
 .app-produccion .contenido { max-width: 640px; margin: 0 auto; }
+
+/* Casillas de cantidad sin flechitas (más limpias en el teléfono) */
+input.cant-num { -moz-appearance: textfield; appearance: textfield; box-sizing: border-box; margin: 0; }
+input.cant-num::-webkit-outer-spin-button, input.cant-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.rec-fila { display: grid; grid-template-columns: minmax(0, 1fr) 36px 76px 54px; column-gap: 8px; align-items: center; }

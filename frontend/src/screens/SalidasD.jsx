@@ -74,7 +74,7 @@ function Fila({ p, n, onCambiar, quitar = false }) {
         <span style={{ fontSize: '0.92rem', fontWeight: n !== '' ? 700 : 500 }}>{p.nombre}</span>
         <small style={{ display: 'block', color: falta || p.existencia <= 0 ? 'var(--peligro)' : 'var(--text-dim)' }}>Hay {num(p.existencia, 0)}{falta ? ' · no alcanza' : ''}</small>
       </div>
-      <input type="number" inputMode="numeric" min="0" step="1" placeholder="0" value={n} onChange={(e) => onCambiar(e.target.value)} aria-label={`Cantidad de ${p.nombre}`} style={{ width: 64, textAlign: 'center', fontSize: '1.1rem', fontWeight: 700, padding: '8px 4px' }} />
+      <input className="cant-num" type="number" inputMode="numeric" min="0" step="1" placeholder="0" value={n} onChange={(e) => onCambiar(e.target.value)} aria-label={`Cantidad de ${p.nombre}`} style={{ width: 64, textAlign: 'center', fontSize: '1.1rem', fontWeight: 700, padding: '8px 4px' }} />
       {quitar && <button className="boton-sm boton-secundario" aria-label="Quitar" onClick={() => onCambiar(0)}>✕</button>}
     </div>
   );
@@ -326,19 +326,22 @@ function Recepcion({ id, session, admin, onVolver, onFin }) {
       {error && <div className="error" onClick={() => setError('')}>{error}</div>}
       {grupos.map(([titulo, items]) => items.length > 0 && (
         <div key={titulo} style={{ marginBottom: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-dim)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', padding: '4px 4px 2px' }}><span>{titulo}</span><span>Salió · Regresó</span></div>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', padding: '4px 4px 2px' }}>{titulo}</div>
+          <div className="rec-fila" style={{ padding: '0 4px 2px', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>
+            <span>Producto</span><span style={{ textAlign: 'center' }}>Salió</span><span style={{ textAlign: 'center' }}>Regresó</span><span />
+          </div>
           {items.map((i) => {
             const v = conteo[i.producto_id] ?? '';
             const sinContar = intento && v === '';
             return (
-              <div key={i.producto_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', borderTop: '1px solid var(--border)', ...(sinContar ? { background: 'color-mix(in srgb, var(--peligro) 12%, transparent)' } : {}) }}>
-                <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+              <div key={i.producto_id} className="rec-fila" style={{ padding: '6px 4px', borderTop: '1px solid var(--border)', ...(sinContar ? { background: 'color-mix(in srgb, var(--peligro) 12%, transparent)' } : {}) }}>
+                <div style={{ minWidth: 0, lineHeight: 1.2 }}>
                   <span style={{ fontSize: '0.92rem', fontWeight: 600 }}>{i.nombre}</span>
                   {Number(v) < i.salio && v !== '' && <small style={{ display: 'block', color: i.consumible ? 'var(--aviso)' : 'var(--peligro)' }}>{i.consumible ? `${i.salio - Number(v)} consumidas` : `faltan ${i.salio - Number(v)} por regresar`}</small>}
                 </div>
-                <strong style={{ fontSize: '1.2rem', minWidth: 30, textAlign: 'center' }}>{i.salio}</strong>
-                <input type="number" inputMode="numeric" min="0" max={i.salio} step="1" placeholder="?" value={v} onChange={(e) => pone(i.producto_id, e.target.value)} aria-label={`Regresó de ${i.nombre}`} style={{ width: 62, textAlign: 'center', fontSize: '1.15rem', fontWeight: 800, padding: '8px 4px' }} />
-                <button className="boton-sm boton-secundario" title="Regresó todo" onClick={() => pone(i.producto_id, i.salio)}>todo</button>
+                <strong style={{ fontSize: '1.2rem', textAlign: 'center' }}>{i.salio}</strong>
+                <input className="cant-num" type="number" inputMode="numeric" min="0" max={i.salio} step="1" placeholder="?" value={v} onChange={(e) => pone(i.producto_id, e.target.value)} aria-label={`Regresó de ${i.nombre}`} style={{ width: '100%', height: 42, textAlign: 'center', fontSize: '1.15rem', fontWeight: 800, padding: '0 4px' }} />
+                <button className="boton-sm boton-secundario" style={{ width: '100%', padding: '0 4px', height: 42 }} title="Regresó todo" onClick={() => pone(i.producto_id, i.salio)}>todo</button>
               </div>
             );
           })}
@@ -438,7 +441,7 @@ function Detalle({ id, session, perfil, onVolver, onAviso, onTerminar }) {
             {abierta && mueve && (
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                 <button className="boton-secundario" style={chico} disabled={ocupado || c > i.pendiente} title="Devolver a bodega" aria-label="Devolver" onClick={() => mover([{ producto_id: i.producto_id, cantidad: -c }])}>−</button>
-                <input type="number" inputMode="numeric" min="1" step="1" value={cant[i.producto_id] ?? 1} onChange={(e) => setCant({ ...cant, [i.producto_id]: e.target.value })} style={{ width: 44, minHeight: 34, textAlign: 'center', fontWeight: 700, padding: '0 2px' }} />
+                <input className="cant-num" type="number" inputMode="numeric" min="1" step="1" value={cant[i.producto_id] ?? 1} onChange={(e) => setCant({ ...cant, [i.producto_id]: e.target.value })} style={{ width: 44, minHeight: 34, textAlign: 'center', fontWeight: 700, padding: '0 2px' }} />
                 <button className="boton" style={chico} disabled={ocupado} title="Sacar más de la bodega" aria-label="Sacar más" onClick={() => mover([{ producto_id: i.producto_id, cantidad: c }])}>+</button>
               </div>
             )}
