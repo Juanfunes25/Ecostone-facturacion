@@ -128,6 +128,10 @@ const PANTALLAS = [
 ];
 
 const GRUPOS = ['Operación', 'Fabricación', 'Negocio', 'Control', 'Ajustes'];
+// Orden del menú de DISERCO (dentro de cada grupo).
+const ORDEN_DISERCO = ['d-cotizaciones', 'pos', 'd-salidas', 'facturas', 'cierres', 'd-inventario', 'd-catalogo', 'clientes', 'dashboard', 'reportes'];
+// Grupos que se muestran plegados (con flecha) porque se usan poco.
+const GRUPOS_PLEGABLES = ['Control'];
 
 // Preferencias visuales por computadora (tema y barra lateral compacta).
 function leerPreferencia(clave, porDefecto) {
@@ -192,6 +196,7 @@ function PantallaApp({ session, onSalir }) {
   const [compacta, setCompacta] = useState(() => leerPreferencia('barra-compacta', window.innerWidth < 1500 ? '1' : '0') === '1');
   const [menuMovil, setMenuMovil] = useState(false);
   const [empresa, setEmpresa] = useState(() => empresaActiva());
+  const [gruposAbiertos, setGruposAbiertos] = useState({});
 
   function cambiarTema() {
     const nuevo = tema === 'oscuro' ? 'claro' : 'oscuro';
@@ -452,12 +457,22 @@ function PantallaApp({ session, onSalir }) {
 
         <nav className="sidebar-nav">
           {GRUPOS.map((grupo) => {
-            const items = pantallasVisibles.filter((p) => p.grupo === grupo);
+            let items = pantallasVisibles.filter((p) => p.grupo === grupo);
             if (items.length === 0) return null;
+            if (empresa === 'diserco') {
+              const pos = (id) => { const i = ORDEN_DISERCO.indexOf(id); return i < 0 ? 99 : i; };
+              items = [...items].sort((a, b) => pos(a.id) - pos(b.id));
+            }
+            const plegable = GRUPOS_PLEGABLES.includes(grupo);
+            const abierto = !plegable || gruposAbiertos[grupo] || items.some((p) => p.id === actual.id);
             return (
               <div key={grupo} className="sidebar-grupo">
-                <span className="sidebar-grupo-titulo">{grupo}</span>
-                {items.map((p) => (
+                {plegable ? (
+                  <button type="button" className="sidebar-grupo-titulo" onClick={() => setGruposAbiertos({ ...gruposAbiertos, [grupo]: !abierto })} aria-expanded={abierto} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: 1.2, opacity: 0.75, padding: '6px 10px', boxSizing: 'border-box' }}>
+                    <span>{grupo}</span><span aria-hidden="true">{abierto ? '▾' : '▸'}</span>
+                  </button>
+                ) : <span className="sidebar-grupo-titulo">{grupo}</span>}
+                {abierto && items.map((p) => (
                   <button
                     key={p.id}
                     className={`sidebar-item${actual.id === p.id ? ' activo' : ''}`}
