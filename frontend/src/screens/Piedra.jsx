@@ -81,6 +81,20 @@ export default function Piedra({ session, perfil }) {
     }
   }
 
+  async function eliminar() {
+    if (!window.confirm(`¿Eliminar “${editando.form.nombre}” definitivamente? No se puede deshacer.`)) return;
+    setError('');
+    try {
+      await api.del(`/productos/${editando.id}?definitivo=1`, session);
+      setEditando(null);
+      await cargar();
+    } catch (e) {
+      if (e.codigo === 'CON_HISTORIAL' && window.confirm(`${e.message}\n\n¿Desactivarlo ahora?`)) {
+        try { await api.del(`/productos/${editando.id}`, session); setEditando(null); await cargar(); } catch (e2) { setError(e2.message); }
+      } else if (e.codigo !== 'CON_HISTORIAL') setError(e.message);
+    }
+  }
+
   const f = editando?.form;
   const set = (k, v) => setEditando({ ...editando, form: { ...editando.form, [k]: v } });
   const esPiedra = f?.tipo === 'piedra';
@@ -142,6 +156,7 @@ export default function Piedra({ session, perfil }) {
       {editando && (
         <Modal titulo={editando.id ? 'Editar producto' : `Nuevo ${f.tipo}`} onCerrar={() => setEditando(null)} ancho={760}
           pie={<><button className="boton-sm" disabled={guardando} onClick={guardar}>{guardando ? 'Guardando…' : 'Guardar'}</button>
+            {editando.id && gerencia && <button className="boton-sm boton-peligro" disabled={guardando} onClick={eliminar}>🗑 Eliminar</button>}
             {editando.id && <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" style={{ width: 'auto' }} checked={editando.activo} onChange={(e) => setEditando({ ...editando, activo: e.target.checked })} /> Activo</label>}</>}>
           <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <Campo etiqueta="Nombre comercial"><input value={f.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej.: Piedra Río Ocre" /></Campo>

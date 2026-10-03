@@ -40,6 +40,19 @@ export default function CatalogoD({ session, perfil }) {
       setError(e.message);
     }
   }
+  async function eliminar() {
+    if (!window.confirm(`¿Eliminar “${modal.form.nombre}” definitivamente? No se puede deshacer.`)) return;
+    setError('');
+    try {
+      await api.del(`/productos/${modal.id}?definitivo=1`, session);
+      setModal(null);
+      await cargar();
+    } catch (e) {
+      if (e.codigo === 'CON_HISTORIAL' && window.confirm(`${e.message}\n\n¿Desactivarlo ahora?`)) {
+        try { await api.del(`/productos/${modal.id}`, session); setModal(null); await cargar(); } catch (e2) { setError(e2.message); }
+      } else if (e.codigo !== 'CON_HISTORIAL') setError(e.message);
+    }
+  }
   const set = (k, v) => setModal((m) => ({ ...m, form: { ...m.form, [k]: v } }));
 
   return (
@@ -71,7 +84,7 @@ export default function CatalogoD({ session, perfil }) {
         </div>
       </div>
       {modal && (
-        <Modal titulo={modal.id ? 'Editar producto' : 'Nuevo producto'} onCerrar={() => setModal(null)} pie={<><button className="boton-md" disabled={!modal.form.nombre.trim() || modal.form.precio === ''} onClick={guardar}>Guardar</button><button className="boton-md boton-secundario" onClick={() => setModal(null)}>Cancelar</button></>}>
+        <Modal titulo={modal.id ? 'Editar producto' : 'Nuevo producto'} onCerrar={() => setModal(null)} pie={<><button className="boton-md" disabled={!modal.form.nombre.trim() || modal.form.precio === ''} onClick={guardar}>Guardar</button><button className="boton-md boton-secundario" onClick={() => setModal(null)}>Cancelar</button>{modal.id && <button className="boton-md boton-peligro" onClick={eliminar}>🗑 Eliminar</button>}</>}>
           <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <Campo etiqueta="Nombre"><input value={modal.form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej.: Epóxico Quarzo Autonivelante Top - Ivory" /></Campo>
             <Campo etiqueta="Marca" ancho={160}><input value={modal.form.marca} onChange={(e) => set('marca', e.target.value)} placeholder="Ej.: KAIDA" /></Campo>

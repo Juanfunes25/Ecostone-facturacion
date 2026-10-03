@@ -4,7 +4,7 @@ import { descargarCsv } from '../lib/csv.js';
 
 const VACIO = { nombre: '', rtn: '', direccion: '', telefono: '', email: '', exento_impuestos: false };
 
-export default function Clientes({ session, onIrA }) {
+export default function Clientes({ session, perfil, onIrA }) {
   const [busqueda, setBusqueda] = useState('');
   const [clientes, setClientes] = useState([]);
   const [form, setForm] = useState(VACIO);
@@ -41,6 +41,19 @@ export default function Clientes({ session, onIrA }) {
       email: c.email ?? '',
       exento_impuestos: c.exento_impuestos,
     });
+  }
+
+  async function eliminar() {
+    if (!window.confirm(`¿Eliminar al cliente “${form.nombre}” definitivamente? No se puede deshacer.`)) return;
+    setError('');
+    try {
+      await api.del(`/clientes/${editandoId}`, session);
+      setForm(VACIO);
+      setEditandoId(null);
+      cargar();
+    } catch (e) {
+      setError(e.message);
+    }
   }
 
   async function guardar() {
@@ -99,6 +112,11 @@ export default function Clientes({ session, onIrA }) {
               }}
             >
               Cancelar
+            </button>
+          )}
+          {editandoId && ['admin', 'gerente'].includes(perfil?.rol) && (
+            <button className="boton-sm boton-peligro" onClick={eliminar}>
+              🗑 Eliminar
             </button>
           )}
         </div>

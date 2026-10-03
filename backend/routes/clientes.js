@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { requireRole } from '../middleware/requireRole.js';
+import { registrarAuditoria } from '../lib/auditoria.js';
+import { historialDeCliente } from '../lib/borrado.js';
 
 export const clientes = Router();
 
@@ -55,4 +58,18 @@ clientes.put('/:id', async (req, res) => {
     .single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
+});
+
+// Eliminar un cliente: solo si nunca se le facturó ni cotizó nada.
+clientes.delete('/:id', requireRole('admin', 'gerente'), async (req, res) => {
+  const { data: c } = await db.from('clientes').select('id, nombre, es_consumidor_final').eq('id', req.params.id).maybeSingle();
+  if (!c) return res.status(404).json({ error: 'Cliente no encontrado' });
+  if (c.es_consumidor_final) return res.status(400).json({ error: 'Consumidor Final no se puede eliminar' });
+  if ((await historialDeCliente(c.id)) > 0) {
+    return res.status(409).json({ error: `“${c.nombre}” ya tiene facturas o cotizaciones: no se puede eliminar para no perder ese historial.`, codigo: 'CON_HISTORIAL' });
+  }
+  const { error } = await db.from('clientes').delete().eq('id', c.id);
+  if (error) return res.status(error.code === '23503' ? 409 : 500).json({ error: error.code === '23503' ? `“${c.nombre}” tiene registros asociados: no se puede eliminar.` : error.message });
+  await registrarAuditoria(req, { accion: 'cliente.eliminar', entidad: 'cliente', entidadId: c.id, detalle: { nombre: c.nombre } });
+  res.status(204).end();
 });

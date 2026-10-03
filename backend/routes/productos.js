@@ -4,6 +4,7 @@ import { requireRole } from '../middleware/requireRole.js';
 import { registrarAuditoria } from '../lib/auditoria.js';
 import { crearAlerta } from '../lib/alertas.js';
 import { precioConIsv } from './ventas.js';
+import { eliminarProducto } from '../lib/borrado.js';
 
 export const productos = Router();
 
@@ -144,6 +145,19 @@ productos.put('/:id', requireRole('admin', 'gerente'), async (req, res) => {
 // Sin borrado físico: WizPOS lo permite, pero acá alcanza con desactivar
 // (una factura ya emitida no debe perder la referencia al producto).
 productos.delete('/:id', requireRole('admin', 'gerente'), async (req, res) => {
+  // ?definitivo=1 → borra de verdad (solo si nunca se usó); si tiene historia responde 409.
+  if (req.query.definitivo === '1') {
+    try {
+      const { data: prod } = await db.from('productos').select('id, nombre, empresa').eq('id', req.params.id).maybeSingle();
+      if (!prod || prod.empresa !== req.empresa) return res.status(404).json({ error: 'Producto no encontrado' });
+      const r = await eliminarProducto(prod.id);
+      if (r.conHistorial) return res.status(409).json({ error: `“${prod.nombre}” ya tiene facturas, cotizaciones, movimientos o producción: no se puede eliminar. Puedes desactivarlo para que no aparezca más.`, codigo: 'CON_HISTORIAL' });
+      await registrarAuditoria(req, { accion: 'producto.eliminar', entidad: 'producto', entidadId: prod.id, detalle: { nombre: prod.nombre, empresa: prod.empresa } });
+      return res.status(204).end();
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
   const { data, error } = await db
     .from('productos')
     .update({ activo: false })
