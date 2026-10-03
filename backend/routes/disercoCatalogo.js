@@ -52,7 +52,7 @@ function camposProducto(b) {
   if (stockMin < 0 || !Number.isInteger(stockMin)) throw err('El mínimo debe ser un número entero');
   return {
     nombre, codigo: String(b.codigo ?? '').trim() || null, categoria_id: b.categoria_id || null, precio,
-    marca: String(b.marca ?? '').trim() || null, presentacion: String(b.presentacion ?? '').trim() || null, rendimiento_texto: String(b.rendimiento_texto ?? '').trim() || null,
+    consumible: !(b.consumible === false || b.consumible === 'false'), marca: String(b.marca ?? '').trim() || null, presentacion: String(b.presentacion ?? '').trim() || null, rendimiento_texto: String(b.rendimiento_texto ?? '').trim() || null,
     unidad_venta: String(b.unidad_venta ?? 'unidad').trim() || 'unidad', controla_inventario: b.controla_inventario !== false && b.controla_inventario !== 'false',
     stock_minimo: stockMin, costo_estandar: numero(b.costo_estandar, 0), descripcion: String(b.descripcion ?? '').trim() || null,
     activo: b.activo === undefined ? true : !!b.activo,

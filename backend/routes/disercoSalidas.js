@@ -17,7 +17,7 @@ const ADMIN = ['admin'];
 const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ error: e.message ?? String(e), codigo: e.codigo, faltantes: e.faltantes });
 const err = (msg, status = 400) => Object.assign(new Error(msg), { status });
 
-const SEL = '*, cotizacion:d_cotizaciones(codigo, proyecto, nombre_cliente), creador:perfiles!d_salidas_creada_por_fkey(nombre), items:d_salida_items(id, producto_id, cantidad_salida, cantidad_retorno, costo_unitario, productos(nombre, presentacion, unidad_venta, codigo))';
+const SEL = '*, cotizacion:d_cotizaciones(codigo, proyecto, nombre_cliente), creador:perfiles!d_salidas_creada_por_fkey(nombre), items:d_salida_items(id, producto_id, cantidad_salida, cantidad_retorno, costo_unitario, productos(nombre, presentacion, unidad_venta, codigo, consumible))';
 
 // El gestor de proyecto ve cantidades, no costos.
 function sinCostos(rol, s) {
@@ -120,6 +120,58 @@ disercoSalidas.get('/:id/historial', requireRole(...ADMIN), async (req, res) => 
   res.json(filas);
 });
 
+// ── Recepción de material al terminar el proyecto ────────────────────────────
+// Quien recibe ve lo que salió (sin costos), cuenta lo que regresó y el sistema cuadra:
+// consumido = salió − regresó. Lo que no es consumible (moldes, herramientas) debe regresar completo.
+disercoSalidas.get('/por-cerrar', requireRole(...MUEVE), async (req, res) => {
+  const { data, error } = await db.from('d_salidas').select(SEL).eq('estado', 'abierta').order('created_at', { ascending: false });
+  if (error) return fallo(res, error, 500);
+  res.json(data.map(resumen).map((s) => ({ id: s.id, proyecto: s.proyecto, productos: s.items.filter((i) => i.pendiente > 0).length, unidades: s.unidades, desde: s.created_at })));
+});
+
+disercoSalidas.get('/:id/recepcion', requireRole(...MUEVE), async (req, res) => {
+  const s = await cargar(req.params.id);
+  if (!s) return res.status(404).json({ error: 'Proyecto no encontrado' });
+  if (s.estado !== 'abierta') return res.status(409).json({ error: 'Este proyecto ya está terminado' });
+  res.json({ id: s.id, proyecto: s.proyecto, items: s.items.filter((i) => i.pendiente > 0).map((i) => ({ producto_id: i.producto_id, nombre: i.productos?.nombre, presentacion: i.productos?.presentacion, salio: i.pendiente, consumible: i.productos?.consumible !== false })) });
+});
+
+disercoSalidas.post('/:id/cerrar', requireRole(...MUEVE), async (req, res) => {
+  try {
+    const salida = await cargar(req.params.id);
+    if (!salida) return res.status(404).json({ error: 'Proyecto no encontrado' });
+    if (salida.estado !== 'abierta') throw err('Este proyecto ya está terminado', 409);
+    const conteo = new Map((Array.isArray(req.body.conteo) ? req.body.conteo : []).map((c) => [c.producto_id, c.regreso]));
+    const pendientes = salida.items.filter((i) => i.pendiente > 0);
+    for (const i of pendientes) {
+      const r = conteo.get(i.producto_id);
+      if (r === undefined || r === '' || r === null) throw err(`Falta contar: ${i.productos?.nombre}`);
+      if (!Number.isInteger(Number(r)) || Number(r) < 0) throw err(`${i.productos?.nombre}: escribe un número entero (0 si no regresó nada)`);
+      if (Number(r) > i.pendiente) throw err(`${i.productos?.nombre}: no pueden regresar ${r}, solo salieron ${i.pendiente}`);
+    }
+    for (const i of pendientes) {
+      const r = Number(conteo.get(i.producto_id));
+      if (r > 0) await mover(req, salida, i.producto_id, -r, { forzar: true });
+    }
+    const final = await cargar(salida.id);
+    const lineas = final.items.map((i) => ({
+      producto_id: i.producto_id, producto: i.productos?.nombre, consumible: i.productos?.consumible !== false,
+      salio: Number(i.cantidad_salida), regreso: Number(i.cantidad_retorno), consumido: i.pendiente, costo: round2(i.pendiente * Number(i.costo_unitario)),
+    }));
+    const faltanNoConsumibles = lineas.filter((l) => !l.consumible && l.consumido > 0);
+    const resumenCierre = { cerrado_por: req.perfil.nombre, lineas, costo_consumido: round2(lineas.filter((l) => l.consumible).reduce((t, l) => t + l.costo, 0)), costo_no_regresado: round2(faltanNoConsumibles.reduce((t, l) => t + l.costo, 0)) };
+    await db.from('d_salidas').update({ estado: 'cerrada', cerrada_at: new Date().toISOString(), cerrada_por: req.perfil.id, resumen: resumenCierre }).eq('id', salida.id);
+    await registrarAuditoria(req, { accion: 'salida.cerrar', entidad: 'd_salida', entidadId: salida.id, sucursalId: salida.sucursal_id, detalle: { numero: salida.numero, proyecto: salida.proyecto, conteo: lineas.map((l) => `${l.producto}: salió ${l.salio}, regresó ${l.regreso}, ${l.consumible ? 'consumido' : 'NO regresó'} ${l.consumido}`) } });
+    if (faltanNoConsumibles.length) {
+      await crearAlerta(req, { tipo: 'proyecto.material_no_regreso', severidad: 'media', titulo: `${salida.proyecto}: no regresó material que debía volver (${faltanNoConsumibles.map((l) => `${l.consumido} × ${l.producto}`).join(', ')})`, sucursalId: salida.sucursal_id, entidad: 'd_salida', entidadId: salida.id, detalle: { proyecto: salida.proyecto, recibio: req.perfil.nombre, faltantes: faltanNoConsumibles.map((l) => `${l.producto}: salió ${l.salio}, regresó ${l.regreso}`).join(' · ') } });
+    }
+    const admin = req.perfil.rol === 'admin';
+    res.json({ proyecto: salida.proyecto, lineas: lineas.map((l) => (admin ? l : { ...l, costo: undefined })), costo_consumido: admin ? resumenCierre.costo_consumido : undefined, costo_no_regresado: admin ? resumenCierre.costo_no_regresado : undefined });
+  } catch (e) {
+    fallo(res, e);
+  }
+});
+
 disercoSalidas.get('/', requireRole(...ADMIN), async (req, res) => {
   let q = db.from('d_salidas').select(SEL).order('created_at', { ascending: false }).limit(200);
   if (req.query.estado) q = q.eq('estado', req.query.estado);
@@ -190,25 +242,6 @@ disercoSalidas.post('/:id/movimiento', requireRole(...ADMIN), async (req, res) =
     await registrarAuditoria(req, { accion: 'salida.movimiento', entidad: 'd_salida', entidadId: salida.id, sucursalId: salida.sucursal_id, detalle: { numero: salida.numero, proyecto: salida.proyecto, items } });
     if (faltantes.length) await crearAlerta(req, { tipo: 'inventario.salida_sin_stock', severidad: 'baja', titulo: `Material para ${salida.proyecto} sacado sin existencia suficiente (${req.perfil.nombre})`, sucursalId: salida.sucursal_id, entidad: 'd_salida', entidadId: salida.id, detalle: { faltantes: faltantes.map((f) => `${f.producto}: pidió ${f.pedido}, había ${f.hay}`).join(' · ') } });
     res.json(sinCostos(req.perfil.rol, await cargar(salida.id)));
-  } catch (e) {
-    fallo(res, e);
-  }
-});
-
-// Cierra el proyecto. sobrante: 'devolver' regresa a bodega lo pendiente; 'consumido' lo da por usado.
-disercoSalidas.post('/:id/cerrar', requireRole(...ADMIN), async (req, res) => {
-  try {
-    const salida = await cargar(req.params.id);
-    if (!salida) return res.status(404).json({ error: 'Salida no encontrada' });
-    if (salida.estado !== 'abierta') throw err('Ya está cerrada', 409);
-    if (req.body.sobrante === 'devolver') {
-      for (const i of salida.items) if (i.pendiente > 0) await mover(req, salida, i.producto_id, -i.pendiente, { forzar: true });
-    }
-    await db.from('d_salidas').update({ estado: 'cerrada', cerrada_at: new Date().toISOString(), cerrada_por: req.perfil.id }).eq('id', salida.id);
-    const fin = await cargar(salida.id);
-    const finVisible = sinCostos(req.perfil.rol, fin);
-    await registrarAuditoria(req, { accion: 'salida.cerrar', entidad: 'd_salida', entidadId: salida.id, sucursalId: salida.sucursal_id, detalle: { numero: salida.numero, proyecto: salida.proyecto, sobrante: req.body.sobrante ?? 'consumido', costo_consumido: fin.costo_total } });
-    res.json(finVisible);
   } catch (e) {
     fallo(res, e);
   }

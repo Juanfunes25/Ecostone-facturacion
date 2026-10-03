@@ -4,7 +4,7 @@ import Modal, { Campo, Etiqueta } from '../components/Modal.jsx';
 import { L, num } from '../lib/fmt.js';
 
 const UNIDADES = ['unidad', 'kit', 'galon', 'cubeta', 'saco', 'litro', 'm2', 'ml'];
-const VACIO = { nombre: '', codigo: '', marca: '', categoria_id: '', presentacion: 'Kit', unidad_venta: 'kit', precio: '', costo_estandar: '', rendimiento_texto: '', controla_inventario: true, stock_minimo: '0', activo: true };
+const VACIO = { nombre: '', codigo: '', marca: '', categoria_id: '', presentacion: 'Kit', unidad_venta: 'kit', precio: '', costo_estandar: '', rendimiento_texto: '', controla_inventario: true, consumible: true, stock_minimo: '0', activo: true };
 
 // Catálogo de productos de DISERCO. Los precios van SIN ISV (el ISV se suma en la cotización).
 function Seccion({ titulo, children }) {
@@ -110,6 +110,7 @@ export default function CatalogoD({ session, perfil }) {
           </Seccion>
           <Seccion titulo="3 · Inventario">
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', gridColumn: '1 / -1' }}><input type="checkbox" style={{ width: 'auto' }} checked={modal.form.controla_inventario} onChange={(e) => set('controla_inventario', e.target.checked)} /> Controlar inventario (descuenta al facturar)</label>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', gridColumn: '1 / -1' }}><input type="checkbox" style={{ width: 'auto' }} checked={modal.form.consumible} onChange={(e) => set('consumible', e.target.checked)} /> Se consume al usarse (resinas, selladores…). Desmárcalo para moldes y herramientas, que deben regresar del proyecto.</label>
             {modal.form.controla_inventario && <Campo etiqueta="Mínimo en inventario"><input type="number" step="1" min="0" value={modal.form.stock_minimo} onChange={(e) => set('stock_minimo', e.target.value)} /></Campo>}
             {modal.id && <label style={{ display: 'flex', gap: 8, alignItems: 'center', gridColumn: '1 / -1' }}><input type="checkbox" style={{ width: 'auto' }} checked={modal.form.activo} onChange={(e) => set('activo', e.target.checked)} /> Producto activo (aparece en ventas y cotizaciones)</label>}
           </Seccion>
