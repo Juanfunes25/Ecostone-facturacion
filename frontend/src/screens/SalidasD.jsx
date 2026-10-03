@@ -4,7 +4,6 @@ import Modal from '../components/Modal.jsx';
 import AvisoSinStock from '../components/AvisoSinStock.jsx';
 import { L, num, fechaCorta } from '../lib/fmt.js';
 
-const paso = { fontSize: '1.5rem', minWidth: 56, minHeight: 52, fontWeight: 800 };
 const sinTildes = (t) => String(t ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 // Busca por palabras en cualquier orden y sin tildes: "epox ivory" encuentra "Epóxico Quarzo … Ivory".
@@ -14,71 +13,56 @@ function coincide(p, texto) {
   return palabras.every((w) => pajar.includes(w));
 }
 
-// Elegir productos de la bodega: buscador grande, categorías, los más usados y +/− por producto.
-function SelectorProductos({ productos, items, onCambiar, frecuentes = [] }) {
+// Elegir productos de la bodega: buscador, categorías y una lista compacta con una casilla de cantidad.
+function SelectorProductos({ productos, items, onCambiar }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('');
   const categorias = useMemo(() => [...new Set(productos.map((p) => p.categorias?.nombre).filter(Boolean))], [productos]);
-  const porId = useMemo(() => new Map(productos.map((p) => [p.id, p])), [productos]);
   const resultados = useMemo(() => productos.filter((p) => (!cat || p.categorias?.nombre === cat) && (!q.trim() || coincide(p, q))), [productos, q, cat]);
-  const cantidadDe = (id) => items.find((i) => i.producto_id === id)?.cantidad ?? 0;
-  const poner = (id, cantidad) => {
-    const c = Math.round(Number(cantidad)) || 0;
-    if (c <= 0) return onCambiar(items.filter((i) => i.producto_id !== id));
+  const cantidadDe = (id) => items.find((i) => i.producto_id === id)?.cantidad ?? '';
+  const poner = (id, texto) => {
+    const c = Math.max(0, Math.round(Number(texto)) || 0);
+    if (c === 0) return onCambiar(items.filter((i) => i.producto_id !== id));
     onCambiar(items.some((i) => i.producto_id === id) ? items.map((i) => (i.producto_id === id ? { ...i, cantidad: c } : i)) : [...items, { producto_id: id, cantidad: c }]);
   };
 
   return (
     <div>
-      {items.length > 0 && (
-        <div style={{ marginBottom: 12, border: '2px solid var(--color-sucursal)', borderRadius: 12, padding: 8 }}>
-          <strong>Lo que se lleva ({items.reduce((s, i) => s + i.cantidad, 0)})</strong>
-          {items.map((i) => {
-            const p = porId.get(i.producto_id);
-            const falta = p && i.cantidad > p.existencia;
-            return (
-              <div key={i.producto_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
-                <div style={{ flex: '1 1 160px', minWidth: 0 }}>
-                  <strong>{p?.nombre ?? '—'}</strong>
-                  <small style={{ display: 'block', color: falta ? 'var(--peligro)' : 'var(--text-dim)' }}>En bodega: {num(p?.existencia ?? 0, 0)}{falta ? ' · no alcanza' : ''}</small>
-                </div>
-                <button className="boton-secundario" style={paso} onClick={() => poner(i.producto_id, i.cantidad - 1)}>−</button>
-                <input type="number" inputMode="numeric" min="0" step="1" value={i.cantidad} onChange={(e) => poner(i.producto_id, e.target.value)} style={{ width: 76, textAlign: 'center', fontSize: '1.3rem', fontWeight: 800 }} />
-                <button className="boton" style={paso} onClick={() => poner(i.producto_id, i.cantidad + 1)}>+</button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <input type="search" placeholder="🔍 Buscar producto (escribe parte del nombre)…" value={q} onChange={(e) => setQ(e.target.value)} style={{ fontSize: '1.1rem', padding: '14px 12px' }} />
+      <input type="search" placeholder="🔍 Buscar producto (escribe parte del nombre)…" value={q} onChange={(e) => setQ(e.target.value)} style={{ fontSize: '1.05rem', padding: '12px' }} />
       {categorias.length > 1 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' }}>
-          <button className={cat ? 'boton-sm boton-secundario' : 'boton-sm'} onClick={() => setCat('')}>Todos</button>
-          {categorias.map((c) => <button key={c} className={cat === c ? 'boton-sm' : 'boton-sm boton-secundario'} onClick={() => setCat(cat === c ? '' : c)}>{c}</button>)}
-        </div>
-      )}
-      {!q.trim() && !cat && frecuentes.length > 0 && (
-        <div style={{ margin: '8px 0' }}>
-          <small style={{ color: 'var(--text-dim)' }}>Los que más sacan:</small>
+        <div style={{ margin: '8px 0 4px' }}>
+          <small style={{ color: 'var(--text-dim)', fontWeight: 700 }}>Categorías:</small>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-            {frecuentes.map((id) => porId.get(id)).filter(Boolean).map((p) => <button key={p.id} className="boton-sm boton-secundario" onClick={() => poner(p.id, cantidadDe(p.id) + 1)}>{p.nombre}{cantidadDe(p.id) ? ` · ${cantidadDe(p.id)}` : ''}</button>)}
+            <button className={cat ? 'boton-sm boton-secundario' : 'boton-sm'} onClick={() => setCat('')}>Todas</button>
+            {categorias.map((c) => <button key={c} className={cat === c ? 'boton-sm' : 'boton-sm boton-secundario'} onClick={() => setCat(cat === c ? '' : c)}>{c}</button>)}
           </div>
         </div>
       )}
-      <div style={{ display: 'grid', gap: 6, marginTop: 8, maxHeight: 360, overflowY: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 4px 2px', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
+        <span>Producto</span><span>Cantidad</span>
+      </div>
+      <div style={{ maxHeight: 340, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
         {resultados.map((p) => {
           const n = cantidadDe(p.id);
+          const falta = n !== '' && n > p.existencia;
           return (
-            <button key={p.id} className={n ? 'boton' : 'boton-secundario'} style={{ textAlign: 'left', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', minHeight: 52 }} onClick={() => poner(p.id, n + 1)}>
-              <span>{p.nombre}{p.presentacion ? <small style={{ display: 'block', opacity: 0.75 }}>{p.presentacion}</small> : null}</span>
-              <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}><strong style={{ fontSize: '1.2rem', color: n ? 'inherit' : p.existencia > 0 ? 'var(--ok)' : 'var(--peligro)' }}>{num(p.existencia, 0)}</strong>{n > 0 && <small style={{ display: 'block' }}>llevas {n}</small>}</span>
-            </button>
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', borderBottom: '1px solid var(--border)', background: n !== '' ? 'color-mix(in srgb, var(--color-sucursal) 14%, transparent)' : undefined }}>
+              <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+                <span style={{ fontSize: '0.92rem', fontWeight: n !== '' ? 700 : 500 }}>{p.nombre}</span>
+                <small style={{ display: 'block', color: falta ? 'var(--peligro)' : p.existencia > 0 ? 'var(--text-dim)' : 'var(--peligro)' }}>Hay {num(p.existencia, 0)}{falta ? ' · no alcanza' : ''}</small>
+              </div>
+              <input type="number" inputMode="numeric" min="0" step="1" placeholder="0" value={n} onChange={(e) => poner(p.id, e.target.value)} aria-label={`Cantidad de ${p.nombre}`} style={{ width: 64, textAlign: 'center', fontSize: '1.1rem', fontWeight: 700, padding: '8px 4px' }} />
+            </div>
           );
         })}
         {resultados.length === 0 && <p style={{ color: 'var(--text-dim)', textAlign: 'center' }}>{productos.length === 0 ? 'No hay productos con control de inventario.' : 'No encontré ese producto. Prueba con otra palabra.'}</p>}
       </div>
-      <small style={{ color: 'var(--text-dim)' }}>Toca un producto para agregarlo; vuelve a tocarlo para sumar uno más. El número verde es lo que hay en bodega.</small>
+      {items.length > 0 && (
+        <div style={{ marginTop: 10, padding: '8px 10px', border: '1px solid var(--color-sucursal)', borderRadius: 10 }}>
+          <strong style={{ fontSize: '0.9rem' }}>Llevas {items.length} producto{items.length === 1 ? '' : 's'} ({items.reduce((s, i) => s + i.cantidad, 0)} unidades)</strong>
+          {items.map((i) => { const p = productos.find((x) => x.id === i.producto_id); return <div key={i.producto_id} style={{ fontSize: '0.88rem', display: 'flex', justifyContent: 'space-between', gap: 8 }}><span>{p?.nombre}</span><strong>{i.cantidad}</strong></div>; })}
+        </div>
+      )}
     </div>
   );
 }
@@ -128,7 +112,6 @@ function Nueva({ session, onCancelar, onCreada }) {
   const [productos, setProductos] = useState([]);
   const [abiertos, setAbiertos] = useState([]);
   const [cotizaciones, setCotizaciones] = useState([]);
-  const [previas, setPrevias] = useState([]);
   const [proyecto, setProyecto] = useState(null); // { nombre, cotizacion_id }
   const [otro, setOtro] = useState(false);
   const [texto, setTexto] = useState('');
@@ -136,26 +119,17 @@ function Nueva({ session, onCancelar, onCreada }) {
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [faltantes, setFaltantes] = useState(null);
-  const [intento, setIntento] = useState(false);
 
   useEffect(() => {
     api.get('/diserco/inventario', session).then(setProductos).catch((e) => setError(e.message));
-    api.get('/diserco/salidas?estado=abierta', session).then((r) => { setAbiertos(r); setPrevias(r); }).catch(() => {});
+    api.get('/diserco/salidas?estado=abierta', session).then(setAbiertos).catch(() => {});
     api.get('/diserco/salidas/proyectos', session).then(setCotizaciones).catch(() => {});
-    api.get('/diserco/salidas?estado=cerrada', session).then((r) => setPrevias((p) => [...p, ...r])).catch(() => {});
   }, []);
-  const frecuentes = useMemo(() => {
-    const cuenta = new Map();
-    for (const s of previas) for (const i of s.items) cuenta.set(i.producto_id, (cuenta.get(i.producto_id) ?? 0) + 1);
-    return [...cuenta].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id]) => id);
-  }, [previas]);
   const nombresAbiertos = new Set(abiertos.map((a) => a.proyecto));
   const deCotizacion = cotizaciones.filter((c) => !nombresAbiertos.has(`${c.proyecto} — ${c.nombre_cliente}`));
 
-  const sinProyecto = !proyecto || proyecto.nombre.trim().length < 3;
   async function guardar(confirmar) {
-    setIntento(true);
-    if (sinProyecto || items.length === 0) return;
+    if (!proyecto || items.length === 0) return;
     setError('');
     setGuardando(true);
     try {
@@ -167,45 +141,45 @@ function Nueva({ session, onCancelar, onCreada }) {
       setGuardando(false);
     }
   }
-  const tarjeta = (activo) => ({ textAlign: 'left', padding: '12px 14px', borderRadius: 10, ...(activo ? { outline: '3px solid var(--color-sucursal)' } : {}) });
+  const fila = { textAlign: 'left', padding: '12px 14px', borderRadius: 10 };
 
+  // Paso 1: ¿a qué proyecto va?
+  if (!proyecto) {
+    return (
+      <div className="panel">
+        <div className="toolbar" style={{ justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0 }}>¿A qué proyecto va?</h2>
+          <button className="boton-sm boton-secundario" onClick={onCancelar}>← Volver</button>
+        </div>
+        {error && <div className="error" onClick={() => setError('')}>{error}</div>}
+        <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+          {abiertos.length > 0 && <small style={{ color: 'var(--text-dim)', fontWeight: 700 }}>PROYECTOS EN CURSO</small>}
+          {abiertos.map((a) => <button key={a.id} className="boton-secundario" style={fila} onClick={() => setProyecto({ nombre: a.proyecto, cotizacion_id: a.cotizacion_id })}>{a.proyecto}</button>)}
+          {deCotizacion.length > 0 && <small style={{ color: 'var(--text-dim)', fontWeight: 700, marginTop: 6 }}>COTIZACIONES DE PROYECTO APROBADAS</small>}
+          {deCotizacion.slice(0, 10).map((c) => <button key={c.id} className="boton-secundario" style={fila} onClick={() => setProyecto({ nombre: `${c.proyecto} — ${c.nombre_cliente}`, cotizacion_id: c.id })}>{c.proyecto} <small style={{ opacity: 0.75 }}>— {c.nombre_cliente}</small></button>)}
+          <small style={{ color: 'var(--text-dim)', fontWeight: 700, marginTop: 6 }}>OTRO PROYECTO</small>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input placeholder="Escribe el nombre del proyecto" value={texto} onChange={(e) => setTexto(e.target.value)} />
+            <button className="boton" style={{ minWidth: 90, fontWeight: 800 }} disabled={texto.trim().length < 3} onClick={() => setProyecto({ nombre: texto.trim(), cotizacion_id: '' })}>Seguir →</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Paso 2: sacar el material
   return (
     <div className="panel">
       {faltantes && <AvisoSinStock faltantes={faltantes} accion="registrar la salida" onCancelar={() => setFaltantes(null)} onContinuar={() => { setFaltantes(null); guardar(true); }} />}
-      <div className="toolbar" style={{ justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>Sacar material</h2>
-        <button className="boton-sm boton-secundario" onClick={onCancelar}>← Volver</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--color-sucursal) 18%, transparent)' }}>
+        <div style={{ minWidth: 0 }}><small style={{ color: 'var(--text-dim)' }}>Proyecto</small><strong style={{ display: 'block' }}>{proyecto.nombre}</strong></div>
+        <button className="boton-sm boton-secundario" onClick={() => { setProyecto(null); setItems([]); }}>Cambiar</button>
       </div>
       {error && <div className="error" onClick={() => setError('')}>{error}</div>}
-
-      <h3 style={{ marginBottom: 6 }}>1 · ¿A qué proyecto va? {intento && sinProyecto && <span style={{ color: 'var(--peligro)', fontSize: '0.8em' }}>⚠ elige un proyecto</span>}</h3>
-      {proyecto && !otro ? (
-        <div className="boton" style={{ padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-          <strong>✓ {proyecto.nombre}</strong>
-          <button className="boton-sm boton-secundario" onClick={() => setProyecto(null)}>Cambiar</button>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 8, ...(intento && sinProyecto ? { outline: '2px solid var(--peligro)', padding: 6, borderRadius: 10 } : {}) }}>
-          {abiertos.length > 0 && <small style={{ color: 'var(--text-dim)' }}>Proyectos en curso (se suma al mismo registro):</small>}
-          {abiertos.map((a) => <button key={a.id} className="boton-secundario" style={tarjeta(proyecto?.nombre === a.proyecto)} onClick={() => { setProyecto({ nombre: a.proyecto, cotizacion_id: a.cotizacion_id }); setOtro(false); }}>{a.proyecto}</button>)}
-          {deCotizacion.length > 0 && <small style={{ color: 'var(--text-dim)' }}>Cotizaciones de proyecto aprobadas:</small>}
-          {deCotizacion.slice(0, 8).map((c) => <button key={c.id} className="boton-secundario" style={tarjeta(false)} onClick={() => { setProyecto({ nombre: `${c.proyecto} — ${c.nombre_cliente}`, cotizacion_id: c.id }); setOtro(false); }}>{c.proyecto} <small style={{ opacity: 0.75 }}>— {c.nombre_cliente} ({c.codigo})</small></button>)}
-          {!otro
-            ? <button className="boton-sm boton-secundario" onClick={() => setOtro(true)}>+ Escribir otro proyecto</button>
-            : (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input autoFocus placeholder="Nombre del proyecto" value={texto} onChange={(e) => setTexto(e.target.value)} />
-                <button className="boton-md" disabled={texto.trim().length < 3} onClick={() => { setProyecto({ nombre: texto.trim(), cotizacion_id: '' }); setOtro(false); }}>OK</button>
-              </div>
-            )}
-        </div>
-      )}
-
-      <h3 style={{ marginBottom: 6 }}>2 · ¿Qué material? {intento && items.length === 0 && <span style={{ color: 'var(--peligro)', fontSize: '0.8em' }}>⚠ agrega al menos un producto</span>}</h3>
-      <SelectorProductos productos={productos} items={items} onCambiar={setItems} frecuentes={frecuentes} />
-
-      <button className="boton" style={{ width: '100%', marginTop: 16, padding: '18px 22px', fontSize: '1.2rem', fontWeight: 800 }} disabled={guardando} onClick={() => guardar(false)}>
-        {guardando ? 'Registrando…' : `REGISTRAR SALIDA${items.length ? ` (${items.reduce((s, i) => s + i.cantidad, 0)})` : ''}`}
+      <h3 style={{ margin: '12px 0 6px' }}>Sacar material</h3>
+      <SelectorProductos productos={productos} items={items} onCambiar={setItems} />
+      <button className="boton" style={{ width: '100%', marginTop: 14, padding: '16px 20px', fontSize: '1.15rem', fontWeight: 800 }} disabled={guardando || items.length === 0} onClick={() => guardar(false)}>
+        {guardando ? 'Registrando…' : items.length ? `REGISTRAR SALIDA (${items.reduce((s, i) => s + i.cantidad, 0)})` : 'Escribe la cantidad de lo que sacas'}
       </button>
     </div>
   );
@@ -276,22 +250,22 @@ function Detalle({ id, session, perfil, onVolver, onAviso }) {
       {filas.map((i) => {
         const c = Math.max(1, Number(cant[i.producto_id]) || 1);
         return (
-          <div key={i.id} style={{ padding: '12px 0', borderTop: '1px solid var(--border)' }}>
+          <div key={i.id} style={{ padding: '8px 0', borderTop: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
               <div style={{ minWidth: 0 }}>
                 <strong>{i.productos?.nombre}</strong>
                 {abierta && <small style={{ display: 'block', color: 'var(--text-dim)' }}>En bodega: {num(hayEnBodega.get(i.producto_id) ?? 0, 0)}</small>}
               </div>
               <div style={{ textAlign: 'center' }}>
-                <strong style={{ fontSize: '2.2rem', lineHeight: 1, color: 'var(--aviso)' }}>{num(i.pendiente, 0)}</strong>
+                <strong style={{ fontSize: '1.7rem', lineHeight: 1, color: 'var(--aviso)' }}>{num(i.pendiente, 0)}</strong>
                 <small style={{ display: 'block', color: 'var(--text-dim)' }}>{abierta ? 'en el proyecto' : 'usadas'}</small>
               </div>
             </div>
             {abierta && mueve && (
-              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', marginTop: 8 }}>
-                <button className="boton-secundario" style={{ flex: 1, minHeight: 52, fontWeight: 700 }} disabled={ocupado || c > i.pendiente} onClick={() => mover([{ producto_id: i.producto_id, cantidad: -c }])}>− Devolver</button>
-                <input type="number" inputMode="numeric" min="1" step="1" value={cant[i.producto_id] ?? 1} onChange={(e) => setCant({ ...cant, [i.producto_id]: e.target.value })} style={{ width: 70, textAlign: 'center', fontWeight: 800, fontSize: '1.3rem' }} />
-                <button className="boton" style={{ flex: 1, minHeight: 52, fontWeight: 700 }} disabled={ocupado} onClick={() => mover([{ producto_id: i.producto_id, cantidad: c }])}>+ Sacar más</button>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', marginTop: 6 }}>
+                <button className="boton-secundario" style={{ flex: 1, minHeight: 44, fontWeight: 700 }} disabled={ocupado || c > i.pendiente} onClick={() => mover([{ producto_id: i.producto_id, cantidad: -c }])}>− Devolver</button>
+                <input type="number" inputMode="numeric" min="1" step="1" value={cant[i.producto_id] ?? 1} onChange={(e) => setCant({ ...cant, [i.producto_id]: e.target.value })} style={{ width: 64, textAlign: 'center', fontWeight: 800, fontSize: '1.15rem' }} />
+                <button className="boton" style={{ flex: 1, minHeight: 44, fontWeight: 700 }} disabled={ocupado} onClick={() => mover([{ producto_id: i.producto_id, cantidad: c }])}>+ Sacar más</button>
               </div>
             )}
           </div>
