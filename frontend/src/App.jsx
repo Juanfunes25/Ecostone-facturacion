@@ -296,7 +296,6 @@ function PantallaApp({ session, onSalir }) {
         if (elegida !== empresaActiva()) {
           fijarEmpresa(elegida);
           setEmpresa(elegida);
-          if (elegida) return; // el cambio de empresa vuelve a ejecutar esta carga
         }
         setPerfil(perfil);
         fijarSucursales(sucursales);

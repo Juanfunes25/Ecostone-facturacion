@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import Modal, { Campo, Etiqueta } from '../components/Modal.jsx';
 import { L, num } from '../lib/fmt.js';
 
-const UNIDADES = ['unidad', 'kit', 'galón', 'cubeta', 'saco', 'litro', 'm2', 'ml'];
+const UNIDADES = ['unidad', 'kit', 'galon', 'cubeta', 'saco', 'litro', 'm2', 'ml'];
 const VACIO = { nombre: '', codigo: '', categoria_id: '', presentacion: 'Kit', unidad_venta: 'kit', precio: '', costo_estandar: '', rendimiento_texto: '', controla_inventario: true, stock_minimo: '0', activo: true };
 
 // Catálogo de productos de DISERCO. Los precios van SIN ISV (el ISV se suma en la cotización).
