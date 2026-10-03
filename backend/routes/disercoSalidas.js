@@ -11,9 +11,9 @@ import { sucursalesDe } from '../lib/empresas.js';
 // (producto, cantidad, proyecto y responsable). Se puede sumar (sacar más), restar
 // (devolver a bodega) y cerrar el proyecto; lo que no regresa cuenta como consumido.
 export const disercoSalidas = Router();
-const LEE = ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega', 'gestor'];
+// Sacar material lo registra cualquiera del equipo autorizado; verlo y modificarlo después es solo del administrador.
 const MUEVE = ['admin', 'gerente', 'bodega', 'gestor'];
-const GERENCIA = ['admin', 'gerente'];
+const ADMIN = ['admin'];
 const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ error: e.message ?? String(e), codigo: e.codigo, faltantes: e.faltantes });
 const err = (msg, status = 400) => Object.assign(new Error(msg), { status });
 
@@ -92,14 +92,35 @@ async function revisarFaltantes(items, confirmar) {
   return faltantes;
 }
 
-// Proyectos para elegir (cotizaciones de proyecto aprobadas): sin montos.
-disercoSalidas.get('/proyectos', requireRole(...LEE), async (req, res) => {
-  const { data, error } = await db.from('d_cotizaciones').select('id, codigo, proyecto, nombre_cliente').eq('tipo', 'proyecto').in('estado', ['aprobada', 'facturada']).order('created_at', { ascending: false }).limit(200);
+// Proyectos para elegir al sacar material: solo nombres (sin cantidades ni costos).
+disercoSalidas.get('/proyectos', requireRole(...MUEVE), async (req, res) => {
+  const [{ data: cots, error }, { data: abiertas }] = await Promise.all([
+    db.from('d_cotizaciones').select('id, codigo, proyecto, nombre_cliente').eq('tipo', 'proyecto').in('estado', ['aprobada', 'facturada']).order('created_at', { ascending: false }).limit(200),
+    db.from('d_salidas').select('proyecto, cotizacion_id').eq('estado', 'abierta').order('created_at', { ascending: false }),
+  ]);
   if (error) return fallo(res, error, 500);
-  res.json(data);
+  const enCurso = (abiertas ?? []).map((a) => ({ nombre: a.proyecto, cotizacion_id: a.cotizacion_id }));
+  const nombres = new Set(enCurso.map((a) => a.nombre));
+  res.json({
+    en_curso: enCurso,
+    cotizaciones: (cots ?? []).filter((c) => !nombres.has(`${c.proyecto} — ${c.nombre_cliente}`)).map((c) => ({ nombre: `${c.proyecto} — ${c.nombre_cliente}`, cotizacion_id: c.id, codigo: c.codigo, proyecto: c.proyecto, cliente: c.nombre_cliente })),
+  });
 });
 
-disercoSalidas.get('/', requireRole(...LEE), async (req, res) => {
+// Historial de un proyecto: cada movimiento de material y cada cierre/reapertura, con quién y cuándo.
+disercoSalidas.get('/:id/historial', requireRole(...ADMIN), async (req, res) => {
+  const [{ data: movs }, { data: eventos }] = await Promise.all([
+    db.from('inv_movimientos').select('id, created_at, tipo, cantidad, productos(nombre), perfiles(nombre)').eq('salida_id', req.params.id).order('created_at', { ascending: false }).limit(500),
+    db.from('auditoria').select('id, created_at, accion, usuario_nombre, detalle').eq('entidad', 'd_salida').eq('entidad_id', req.params.id).in('accion', ['salida.cerrar', 'salida.reabrir']).order('created_at', { ascending: false }),
+  ]);
+  const filas = [
+    ...(movs ?? []).map((m) => ({ clave: `m${m.id}`, fecha: m.created_at, usuario: m.perfiles?.nombre ?? '—', texto: `${Number(m.cantidad) < 0 ? 'Sacó' : 'Devolvió'} ${Math.abs(Number(m.cantidad))} × ${m.productos?.nombre ?? ''}` , tipo: Number(m.cantidad) < 0 ? 'salida' : 'retorno' })),
+    ...(eventos ?? []).map((e) => ({ clave: `e${e.id}`, fecha: e.created_at, usuario: e.usuario_nombre ?? '—', texto: e.accion === 'salida.cerrar' ? `Cerró el proyecto${e.detalle?.sobrante === 'devolver' ? ' (el sobrante regresó a bodega)' : ' (todo se consumió)'}` : 'Reabrió el proyecto', tipo: 'estado' })),
+  ].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  res.json(filas);
+});
+
+disercoSalidas.get('/', requireRole(...ADMIN), async (req, res) => {
   let q = db.from('d_salidas').select(SEL).order('created_at', { ascending: false }).limit(200);
   if (req.query.estado) q = q.eq('estado', req.query.estado);
   if (req.query.cotizacion_id) q = q.eq('cotizacion_id', req.query.cotizacion_id);
@@ -109,7 +130,7 @@ disercoSalidas.get('/', requireRole(...LEE), async (req, res) => {
   res.json(data.map(resumen).filter((s) => !t || [s.proyecto].some((v) => String(v).toLowerCase().includes(t))).map((s) => sinCostos(req.perfil.rol, s)));
 });
 
-disercoSalidas.get('/:id', requireRole(...LEE), async (req, res) => {
+disercoSalidas.get('/:id', requireRole(...ADMIN), async (req, res) => {
   const s = await cargar(req.params.id);
   if (!s) return res.status(404).json({ error: 'Salida no encontrada' });
   res.json(sinCostos(req.perfil.rol, s));
@@ -132,7 +153,7 @@ disercoSalidas.post('/', requireRole(...MUEVE), async (req, res) => {
       const salidaExistente = await cargar(existente.id);
       for (const it of items) await mover(req, salidaExistente, it.producto_id, it.cantidad, { forzar: faltantes.length > 0 });
       await registrarAuditoria(req, { accion: 'salida.movimiento', entidad: 'd_salida', entidadId: existente.id, sucursalId: salidaExistente.sucursal_id, detalle: { numero: salidaExistente.numero, proyecto: salidaExistente.proyecto, items } });
-      return res.status(200).json({ ...sinCostos(req.perfil.rol, await cargar(existente.id)), sumada: true });
+      return res.status(200).json(req.perfil.rol === 'admin' ? { ...(await cargar(existente.id)), sumada: true } : { id: existente.id, proyecto: existente.proyecto, sumada: true, unidades: items.reduce((t, i) => t + i.cantidad, 0) });
     }
     const ids = await sucursalesDe('diserco');
     const sucursal_id = req.perfil.sucursal_id && ids.includes(req.perfil.sucursal_id) ? req.perfil.sucursal_id : ids[0];
@@ -142,7 +163,7 @@ disercoSalidas.post('/', requireRole(...MUEVE), async (req, res) => {
     for (const it of items) await mover(req, salida, it.producto_id, it.cantidad, { forzar: faltantes.length > 0 });
     await registrarAuditoria(req, { accion: 'salida.crear', entidad: 'd_salida', entidadId: salida.id, sucursalId: sucursal_id, detalle: { numero: salida.numero, proyecto, responsable, productos: items.length } });
     if (faltantes.length) await crearAlerta(req, { tipo: 'inventario.salida_sin_stock', severidad: 'baja', titulo: `Salida a ${proyecto} sin existencia suficiente (${req.perfil.nombre})`, sucursalId: sucursal_id, entidad: 'd_salida', entidadId: salida.id, detalle: { faltantes: faltantes.map((f) => `${f.producto}: pidió ${f.pedido}, había ${f.hay}`).join(' · ') } });
-    res.status(201).json(sinCostos(req.perfil.rol, await cargar(salida.id)));
+    res.status(201).json(req.perfil.rol === 'admin' ? await cargar(salida.id) : { id: salida.id, numero: salida.numero, proyecto: salida.proyecto, unidades: items.reduce((t, i) => t + i.cantidad, 0) });
   } catch (e) {
     if (creada) {
       // Si algo falló a medias, lo ya movido regresa a bodega y la salida se descarta.
@@ -158,7 +179,7 @@ disercoSalidas.post('/', requireRole(...MUEVE), async (req, res) => {
 });
 
 // Sumar o restar material en una salida abierta: cantidad > 0 saca más de la bodega; < 0 devuelve.
-disercoSalidas.post('/:id/movimiento', requireRole(...MUEVE), async (req, res) => {
+disercoSalidas.post('/:id/movimiento', requireRole(...ADMIN), async (req, res) => {
   try {
     const salida = await cargar(req.params.id);
     if (!salida) return res.status(404).json({ error: 'Salida no encontrada' });
@@ -175,7 +196,7 @@ disercoSalidas.post('/:id/movimiento', requireRole(...MUEVE), async (req, res) =
 });
 
 // Cierra el proyecto. sobrante: 'devolver' regresa a bodega lo pendiente; 'consumido' lo da por usado.
-disercoSalidas.post('/:id/cerrar', requireRole(...MUEVE), async (req, res) => {
+disercoSalidas.post('/:id/cerrar', requireRole(...ADMIN), async (req, res) => {
   try {
     const salida = await cargar(req.params.id);
     if (!salida) return res.status(404).json({ error: 'Salida no encontrada' });
@@ -193,7 +214,7 @@ disercoSalidas.post('/:id/cerrar', requireRole(...MUEVE), async (req, res) => {
   }
 });
 
-disercoSalidas.post('/:id/reabrir', requireRole(...GERENCIA), async (req, res) => {
+disercoSalidas.post('/:id/reabrir', requireRole(...ADMIN), async (req, res) => {
   try {
     const salida = await cargar(req.params.id);
     if (!salida) return res.status(404).json({ error: 'Salida no encontrada' });

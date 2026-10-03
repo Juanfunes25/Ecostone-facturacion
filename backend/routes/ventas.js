@@ -447,7 +447,12 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
   if (sucursalAjena(req.perfil, venta.sucursal_id)) {
     throw Object.assign(new Error('Esa orden es de otra sucursal'), { status: 403 });
   }
-  const { data: formasValidas } = await db.from('formas_pago').select('id');
+  // Estas tres consultas no dependen entre sí: van en paralelo (menos espera por viajes a la base).
+  const [{ data: formasValidas }, reglas, faltantes] = await Promise.all([
+    db.from('formas_pago').select('id'),
+    obtenerReglas(),
+    verificarInventarioVenta(venta, { confirmarSinStock: !!confirmar_sin_stock }),
+  ]);
   const idsFormas = new Set((formasValidas ?? []).map((f) => f.id));
   for (const p of pagos) {
     const monto = Number(p.monto);
@@ -457,7 +462,6 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
     if (!idsFormas.has(p.forma_pago_id)) throw Object.assign(new Error('Forma de pago inválida'), { status: 400 });
   }
 
-  const reglas = await obtenerReglas();
   if (reglas.exigir_carne_tercera_edad) {
     const { data: lineas25 } = await db.from('detalle_venta').select('id').eq('venta_id', venta.id).eq('descuento_porcentaje', 25).limit(1);
     if (lineas25?.length && (!venta.tercera_edad_identidad || String(venta.tercera_edad_identidad).length < 5 || !venta.tercera_edad_nombre)) {
@@ -470,9 +474,6 @@ export async function facturarVenta(req, ventaId, { pagos, efectivo_recibido, or
     throw Object.assign(new Error(`El pago (${totalPagado}) es menor al total (${venta.total})`), { status: 400 });
   }
   const cambio = round2(totalPagado - Number(venta.total));
-
-  // La piedra debe existir en inventario antes de gastar un correlativo.
-  const faltantes = await verificarInventarioVenta(venta, { confirmarSinStock: !!confirmar_sin_stock });
 
   const { data: ventaFinal, error: errFinalizar } = await db.rpc('finalizar_venta', {
     p_venta_id: venta.id,

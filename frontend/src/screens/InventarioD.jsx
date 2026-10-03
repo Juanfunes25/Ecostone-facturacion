@@ -21,6 +21,7 @@ export default function InventarioD({ session, perfil }) {
   const [faltantes, setFaltantes] = useState(null);
   const [abiertas, setAbiertas] = useState([]);
   const mueve = ['admin', 'gerente', 'bodega'].includes(perfil.rol);
+  const admin = perfil.rol === 'admin';
   const gerencia = ['admin', 'gerente'].includes(perfil.rol);
 
   async function cargar() {
@@ -38,7 +39,7 @@ export default function InventarioD({ session, perfil }) {
 
   function abrir(tipo, p) {
     setMenu(null);
-    if (tipo === 'proyecto') api.get('/diserco/salidas?estado=abierta', session).then(setAbiertas).catch(() => {});
+    if (tipo === 'proyecto') api.get('/diserco/salidas/proyectos', session).then((r) => setAbiertas(r.en_curso)).catch(() => {});
     setModal({ tipo, producto: p, form: { salida_id: '', proyecto: '', responsable: '', cantidad: '', costo: tipo === 'compra' ? String(Number(p.costo_estandar) || '') : '', proveedor: '', referencia: '', motivo: '' } });
   }
   const set = (k, v) => setModal((m) => ({ ...m, form: { ...m.form, [k]: v } }));
@@ -48,8 +49,7 @@ export default function InventarioD({ session, perfil }) {
     try {
       const f = modal.form;
       const items = [{ producto_id: modal.producto.id, cantidad: Number(f.cantidad) }];
-      if (f.salida_id) await api.post(`/diserco/salidas/${f.salida_id}/movimiento`, session, { items, confirmar_sin_stock: confirmar });
-      else await api.post('/diserco/salidas', session, { proyecto: f.proyecto, items, confirmar_sin_stock: confirmar });
+      await api.post('/diserco/salidas', session, { proyecto: (f.salida_id || f.proyecto).trim(), items, confirmar_sin_stock: confirmar });
       setAviso(`Salida registrada: ${f.cantidad} × ${modal.producto.nombre}`);
       setModal(null);
       await cargar();
@@ -88,15 +88,15 @@ export default function InventarioD({ session, perfil }) {
               <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" style={{ width: 'auto' }} checked={soloBajo} onChange={(e) => setSoloBajo(e.target.checked)} /> Bajo el mínimo</label>
             </div>
             <table className="tabla">
-              <thead><tr><th>Producto</th><th style={{ textAlign: 'right', fontSize: '1.05rem', color: 'var(--ok)' }}>EN BODEGA<small style={{ display: 'block', fontWeight: 400 }}>para vender</small></th><th style={{ textAlign: 'right', color: 'var(--aviso)' }}>EN PROYECTOS</th><th style={{ textAlign: 'right' }}>Mínimo</th>{gerencia && <th style={{ textAlign: 'right' }}>Costo prom.</th>}<th></th></tr></thead>
+              <thead><tr><th>Producto</th><th style={{ textAlign: 'right', fontSize: '1.05rem', color: 'var(--ok)' }}>EN BODEGA<small style={{ display: 'block', fontWeight: 400 }}>para vender</small></th>{admin && <th style={{ textAlign: 'right', color: 'var(--aviso)' }}>EN PROYECTOS</th>}<th style={{ textAlign: 'right' }}>Mínimo</th>{gerencia && <th style={{ textAlign: 'right' }}>Costo prom.</th>}<th></th></tr></thead>
               <tbody>
                 {visibles.map((p) => (
                   <tr key={p.id}>
                     <td><strong>{p.nombre}</strong> {p.bajo_minimo && <Etiqueta tono="peligro">bajo mínimo</Etiqueta>}<small style={{ display: 'block', color: 'var(--text-dim)' }}>{p.presentacion ?? p.unidad_venta}</small></td>
                     <td style={{ textAlign: 'right', background: 'color-mix(in srgb, var(--ok) 9%, transparent)', minWidth: 120 }}><strong style={{ fontSize: '1.7rem', fontWeight: 800, color: p.existencia > 0 ? 'var(--ok)' : 'var(--peligro)' }}>{num(p.existencia, 0)}</strong></td>
-                    <td style={{ textAlign: 'right', minWidth: 120 }}>
+                    {admin && <td style={{ textAlign: 'right', minWidth: 120 }}>
                       {p.en_proyectos > 0 ? <><strong style={{ fontSize: '1.3rem', color: 'var(--aviso)' }}>{num(p.en_proyectos, 0)}</strong>{p.proyectos.map((x) => <small key={x.salida_id} style={{ display: 'block', color: 'var(--text-dim)' }}>{x.proyecto}: {num(x.cantidad, 0)}</small>)}</> : <span style={{ color: 'var(--text-dim)' }}>—</span>}
-                    </td>
+                    </td>}
                     <td style={{ textAlign: 'right' }}>{num(p.stock_minimo, 0)}</td>
                     {gerencia && <td style={{ textAlign: 'right' }}>{Number(p.costo_estandar) > 0 ? L(p.costo_estandar) : '—'}</td>}
                     <td>
@@ -119,7 +119,7 @@ export default function InventarioD({ session, perfil }) {
                     </td>
                   </tr>
                 ))}
-                {visibles.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-dim)' }}>{filas.length === 0 ? 'Aún no hay productos con control de inventario. Créalos en Productos.' : 'Sin resultados.'}</td></tr>}
+                {visibles.length === 0 && <tr><td colSpan={admin ? 6 : 5} style={{ textAlign: 'center', color: 'var(--text-dim)' }}>{filas.length === 0 ? 'Aún no hay productos con control de inventario. Créalos en Productos.' : 'Sin resultados.'}</td></tr>}
               </tbody>
             </table>
           </>
@@ -152,7 +152,7 @@ export default function InventarioD({ session, perfil }) {
                 <Campo etiqueta="Proyecto">
                   <select value={modal.form.salida_id} onChange={(e) => set('salida_id', e.target.value)}>
                     <option value="">➕ Proyecto nuevo…</option>
-                    {abiertas.map((s) => <option key={s.id} value={s.id}>{s.proyecto}</option>)}
+                    {abiertas.map((s) => <option key={s.nombre} value={s.nombre}>{s.nombre}</option>)}
                   </select>
                 </Campo>
                 {!modal.form.salida_id && <Campo etiqueta="Nombre del proyecto"><input value={modal.form.proyecto} onChange={(e) => set('proyecto', e.target.value)} /></Campo>}

@@ -70,6 +70,16 @@ app.post('/api/sesion/login-fallido', async (req, res) => {
   res.status(204).end();
 });
 
+// Avisa en el log de Render qué peticiones tardan (más de 0.7 s) para saber dónde optimizar.
+app.use('/api', (req, res, next) => {
+  const inicio = process.hrtime.bigint();
+  res.on('finish', () => {
+    const ms = Number(process.hrtime.bigint() - inicio) / 1e6;
+    if (ms > 700) console.warn(`[lento] ${req.method} ${req.originalUrl.split('?')[0]} ${Math.round(ms)} ms (${res.statusCode})`);
+  });
+  next();
+});
+
 app.use('/api', requireAuth);
 
 // El operario de planta (rol "produccion") solo puede usar su módulo de registro, y el

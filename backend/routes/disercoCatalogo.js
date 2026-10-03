@@ -12,17 +12,21 @@ const MUEVE = ['admin', 'gerente', 'bodega'];
 const fallo = (res, e, status = 400) => res.status(e.status ?? status).json({ error: e.message ?? String(e) });
 const err = (msg, status = 400) => Object.assign(new Error(msg), { status });
 
-async function conExistencia(productos) {
+async function conExistencia(productos, rol = 'admin') {
   if (!productos.length) return [];
-  const { data } = await db.from('inv_stock').select('producto_id, existencia').in('producto_id', productos.map((p) => p.id));
+  // Sin filtro por lista de ids (con cientos de productos la dirección de la consulta se vuelve enorme):
+  // las dos tablas son pequeñas y se leen enteras, en paralelo.
+  const verProyectos = rol === 'admin';
+  const [{ data }, { data: fuera }] = await Promise.all([
+    db.from('inv_stock').select('producto_id, existencia'),
+    verProyectos ? db.from('d_salida_items').select('producto_id, cantidad_salida, cantidad_retorno, salida:d_salidas!inner(id, proyecto, estado)').eq('salida.estado', 'abierta') : Promise.resolve({ data: [] }),
+  ]);
   const hay = new Map((data ?? []).map((s) => [s.producto_id, Number(s.existencia)]));
-  // Material que está fuera, en proyectos abiertos.
-  const { data: fuera } = await db.from('d_salida_items').select('producto_id, cantidad_salida, cantidad_retorno, salida:d_salidas!inner(id, proyecto, responsable, estado)').eq('salida.estado', 'abierta').in('producto_id', productos.map((p) => p.id));
   const enProyecto = new Map();
   for (const f of fuera ?? []) {
     const pend = Number(f.cantidad_salida) - Number(f.cantidad_retorno);
     if (pend <= 0) continue;
-    enProyecto.set(f.producto_id, [...(enProyecto.get(f.producto_id) ?? []), { salida_id: f.salida.id, proyecto: f.salida.proyecto, responsable: f.salida.responsable, cantidad: pend }]);
+    enProyecto.set(f.producto_id, [...(enProyecto.get(f.producto_id) ?? []), { salida_id: f.salida.id, proyecto: f.salida.proyecto, cantidad: pend }]);
   }
   return productos.map((p) => {
     const proyectos = enProyecto.get(p.id) ?? [];
@@ -36,7 +40,7 @@ disercoCatalogo.get('/productos', requireRole(...LEE), async (req, res) => {
   if (req.query.incluirInactivos !== 'true') q = q.eq('activo', true);
   const { data, error } = await q;
   if (error) return fallo(res, error, 500);
-  res.json(await conExistencia(data));
+  res.json(await conExistencia(data, req.perfil.rol));
 });
 
 function camposProducto(b) {
@@ -82,7 +86,7 @@ disercoCatalogo.put('/productos/:id', requireRole(...GERENCIA), async (req, res)
 disercoCatalogo.get('/inventario', requireRole(...LEE, 'gestor'), async (req, res) => {
   const { data, error } = await db.from('productos').select('id, codigo, nombre, presentacion, unidad_venta, costo_estandar, precio, stock_minimo, controla_inventario, activo, categorias(nombre)').eq('empresa', 'diserco').eq('controla_inventario', true).eq('activo', true).order('nombre');
   if (error) return fallo(res, error, 500);
-  const filas = await conExistencia(data);
+  const filas = await conExistencia(data, req.perfil.rol);
   res.json(req.perfil.rol === 'gestor' ? filas.map(({ costo_estandar, precio, ...resto }) => resto) : filas);
 });
 

@@ -81,15 +81,29 @@ function Fila({ p, n, onCambiar, quitar = false }) {
 }
 
 export default function SalidasD({ session, perfil }) {
-  const [vista, setVista] = useState({ tipo: 'lista' });
+  const admin = perfil.rol === 'admin';
+  const [vista, setVista] = useState({ tipo: admin ? 'lista' : 'nueva' });
   const [aviso, setAviso] = useState('');
   const [error, setError] = useState('');
+  const [hecha, setHecha] = useState(null); // confirmación para quien no es administrador
+  const [intento, setIntento] = useState(0);
+
+  if (!admin && hecha) {
+    return (
+      <div className="panel" style={{ textAlign: 'center' }}>
+        <h2 style={{ color: 'var(--ok)', fontSize: '1.6rem' }}>✔ Salida registrada</h2>
+        <p style={{ fontSize: '1.15rem', margin: '4px 0' }}><strong>{hecha.proyecto}</strong></p>
+        <p style={{ color: 'var(--text-dim)' }}>{hecha.unidades} unidades quedaron registradas{hecha.sumada ? ' (se sumaron al material del proyecto)' : ''}.</p>
+        <button className="boton" style={{ width: '100%', padding: '18px', fontSize: '1.2rem', fontWeight: 800 }} onClick={() => { setHecha(null); setIntento((n) => n + 1); }}>SACAR MÁS MATERIAL</button>
+      </div>
+    );
+  }
   return (
     <div>
       {error && <div className="error" onClick={() => setError('')}>{error}</div>}
       {aviso && <div className="aviso-ok" onClick={() => setAviso('')}>{aviso}</div>}
       {vista.tipo === 'lista' && <Lista session={session} perfil={perfil} onAbrir={(id) => setVista({ tipo: 'detalle', id })} onNueva={() => setVista({ tipo: 'nueva' })} onError={setError} />}
-      {vista.tipo === 'nueva' && <Nueva session={session} onCancelar={() => setVista({ tipo: 'lista' })} onCreada={(s) => { setAviso(s.sumada ? `Material sumado al proyecto: ${s.proyecto}` : `Salida registrada: ${s.proyecto}`); setVista({ tipo: 'detalle', id: s.id }); }} />}
+      {vista.tipo === 'nueva' && <Nueva key={intento} session={session} onCancelar={admin ? () => setVista({ tipo: 'lista' }) : null} onCreada={(s) => { if (admin) { setAviso(s.sumada ? `Material sumado al proyecto: ${s.proyecto}` : `Salida registrada: ${s.proyecto}`); setVista({ tipo: 'detalle', id: s.id }); } else setHecha(s); }} />}
       {vista.tipo === 'detalle' && <Detalle id={vista.id} session={session} perfil={perfil} onVolver={() => setVista({ tipo: 'lista' })} onAviso={setAviso} />}
     </div>
   );
@@ -135,11 +149,9 @@ function Nueva({ session, onCancelar, onCreada }) {
 
   useEffect(() => {
     api.get('/diserco/inventario', session).then(setProductos).catch((e) => setError(e.message));
-    api.get('/diserco/salidas?estado=abierta', session).then(setAbiertos).catch(() => {});
-    api.get('/diserco/salidas/proyectos', session).then(setCotizaciones).catch(() => {});
+    api.get('/diserco/salidas/proyectos', session).then((r) => { setAbiertos(r.en_curso); setCotizaciones(r.cotizaciones); }).catch(() => {});
   }, []);
-  const nombresAbiertos = new Set(abiertos.map((a) => a.proyecto));
-  const deCotizacion = cotizaciones.filter((c) => !nombresAbiertos.has(`${c.proyecto} — ${c.nombre_cliente}`));
+  const deCotizacion = cotizaciones;
 
   async function guardar(confirmar) {
     if (!proyecto || items.length === 0) return;
@@ -162,14 +174,14 @@ function Nueva({ session, onCancelar, onCreada }) {
       <div className="panel">
         <div className="toolbar" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>¿A qué proyecto va?</h2>
-          <button className="boton-sm boton-secundario" onClick={onCancelar}>← Volver</button>
+          {onCancelar && <button className="boton-sm boton-secundario" onClick={onCancelar}>← Volver</button>}
         </div>
         {error && <div className="error" onClick={() => setError('')}>{error}</div>}
         <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
           {abiertos.length > 0 && <small style={{ color: 'var(--text-dim)', fontWeight: 700 }}>PROYECTOS EN CURSO</small>}
-          {abiertos.map((a) => <button key={a.id} className="boton-secundario" style={fila} onClick={() => setProyecto({ nombre: a.proyecto, cotizacion_id: a.cotizacion_id })}>{a.proyecto}</button>)}
+          {abiertos.map((a) => <button key={a.nombre} className="boton-secundario" style={fila} onClick={() => setProyecto({ nombre: a.nombre, cotizacion_id: a.cotizacion_id })}>{a.nombre}</button>)}
           {deCotizacion.length > 0 && <small style={{ color: 'var(--text-dim)', fontWeight: 700, marginTop: 6 }}>COTIZACIONES DE PROYECTO APROBADAS</small>}
-          {deCotizacion.slice(0, 10).map((c) => <button key={c.id} className="boton-secundario" style={fila} onClick={() => setProyecto({ nombre: `${c.proyecto} — ${c.nombre_cliente}`, cotizacion_id: c.id })}>{c.proyecto} <small style={{ opacity: 0.75 }}>— {c.nombre_cliente}</small></button>)}
+          {deCotizacion.slice(0, 10).map((c) => <button key={c.cotizacion_id} className="boton-secundario" style={fila} onClick={() => setProyecto({ nombre: c.nombre, cotizacion_id: c.cotizacion_id })}>{c.proyecto} <small style={{ opacity: 0.75 }}>— {c.cliente}</small></button>)}
           <small style={{ color: 'var(--text-dim)', fontWeight: 700, marginTop: 6 }}>OTRO PROYECTO</small>
           <div style={{ display: 'flex', gap: 6 }}>
             <input placeholder="Escribe el nombre del proyecto" value={texto} onChange={(e) => setTexto(e.target.value)} />
@@ -198,6 +210,29 @@ function Nueva({ session, onCancelar, onCreada }) {
   );
 }
 
+function Historial({ id, session, refrescar }) {
+  const [abierto, setAbierto] = useState(false);
+  const [filas, setFilas] = useState(null);
+  useEffect(() => { if (abierto) api.get(`/diserco/salidas/${id}/historial`, session).then(setFilas).catch(() => setFilas([])); }, [abierto, id, refrescar]);
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button className="boton-sm boton-secundario" onClick={() => setAbierto(!abierto)}>{abierto ? '▾' : '▸'} Historial de movimientos</button>
+      {abierto && (
+        <div style={{ marginTop: 6, maxHeight: 260, overflowY: 'auto' }}>
+          {(filas ?? []).map((h) => (
+            <div key={h.clave} style={{ display: 'flex', gap: 8, padding: '4px 0', borderBottom: '1px solid var(--border)', fontSize: '0.85rem' }}>
+              <span style={{ color: 'var(--text-dim)', minWidth: 118 }}>{new Date(h.fecha).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa', dateStyle: 'short', timeStyle: 'short' })}</span>
+              <span style={{ flex: 1, color: h.tipo === 'salida' ? 'var(--aviso)' : h.tipo === 'retorno' ? 'var(--ok)' : undefined }}>{h.texto}</span>
+              <span style={{ color: 'var(--text-dim)' }}>{h.usuario}</span>
+            </div>
+          ))}
+          {filas && filas.length === 0 && <small style={{ color: 'var(--text-dim)' }}>Sin movimientos.</small>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Detalle({ id, session, perfil, onVolver, onAviso }) {
   const [s, setS] = useState(null);
   const [productos, setProductos] = useState([]);
@@ -208,8 +243,8 @@ function Detalle({ id, session, perfil, onVolver, onAviso }) {
   const [faltantes, setFaltantes] = useState(null);
   const [error, setError] = useState('');
   const [ocupado, setOcupado] = useState(false);
-  const mueve = ['admin', 'gerente', 'bodega', 'gestor'].includes(perfil.rol);
-  const gerencia = ['admin', 'gerente'].includes(perfil.rol);
+  const mueve = perfil.rol === 'admin';
+  const gerencia = perfil.rol === 'admin';
 
   async function cargar() {
     setS(await api.get(`/diserco/salidas/${id}`, session));
@@ -262,30 +297,30 @@ function Detalle({ id, session, perfil, onVolver, onAviso }) {
 
       {filas.map((i) => {
         const c = Math.max(1, Number(cant[i.producto_id]) || 1);
+        const chico = { minWidth: 34, minHeight: 34, padding: 0, fontSize: '1.1rem', fontWeight: 800, lineHeight: 1 };
         return (
-          <div key={i.id} style={{ padding: '8px 0', borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-              <div style={{ minWidth: 0 }}>
-                <strong>{i.productos?.nombre}</strong>
-                {abierta && <small style={{ display: 'block', color: 'var(--text-dim)' }}>En bodega: {num(hayEnBodega.get(i.producto_id) ?? 0, 0)}</small>}
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <strong style={{ fontSize: '1.7rem', lineHeight: 1, color: 'var(--aviso)' }}>{num(i.pendiente, 0)}</strong>
-                <small style={{ display: 'block', color: 'var(--text-dim)' }}>{abierta ? 'en el proyecto' : 'usadas'}</small>
-              </div>
+          <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: '1px solid var(--border)' }}>
+            <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+              <span style={{ fontSize: '0.93rem', fontWeight: 600 }}>{i.productos?.nombre}</span>
+              {abierta && <small style={{ display: 'block', color: 'var(--text-dim)' }}>Bodega: {num(hayEnBodega.get(i.producto_id) ?? 0, 0)}</small>}
+            </div>
+            <div style={{ textAlign: 'center', minWidth: 44 }}>
+              <strong style={{ fontSize: '1.35rem', lineHeight: 1, color: 'var(--aviso)' }}>{num(i.pendiente, 0)}</strong>
+              <small style={{ display: 'block', color: 'var(--text-dim)', fontSize: '0.68rem' }}>{abierta ? 'en proyecto' : 'usadas'}</small>
             </div>
             {abierta && mueve && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', marginTop: 6 }}>
-                <button className="boton-secundario" style={{ flex: 1, minHeight: 44, fontWeight: 700 }} disabled={ocupado || c > i.pendiente} onClick={() => mover([{ producto_id: i.producto_id, cantidad: -c }])}>− Devolver</button>
-                <input type="number" inputMode="numeric" min="1" step="1" value={cant[i.producto_id] ?? 1} onChange={(e) => setCant({ ...cant, [i.producto_id]: e.target.value })} style={{ width: 64, textAlign: 'center', fontWeight: 800, fontSize: '1.15rem' }} />
-                <button className="boton" style={{ flex: 1, minHeight: 44, fontWeight: 700 }} disabled={ocupado} onClick={() => mover([{ producto_id: i.producto_id, cantidad: c }])}>+ Sacar más</button>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <button className="boton-secundario" style={chico} disabled={ocupado || c > i.pendiente} title="Devolver a bodega" aria-label="Devolver" onClick={() => mover([{ producto_id: i.producto_id, cantidad: -c }])}>−</button>
+                <input type="number" inputMode="numeric" min="1" step="1" value={cant[i.producto_id] ?? 1} onChange={(e) => setCant({ ...cant, [i.producto_id]: e.target.value })} style={{ width: 44, minHeight: 34, textAlign: 'center', fontWeight: 700, padding: '0 2px' }} />
+                <button className="boton" style={chico} disabled={ocupado} title="Sacar más de la bodega" aria-label="Sacar más" onClick={() => mover([{ producto_id: i.producto_id, cantidad: c }])}>+</button>
               </div>
             )}
           </div>
         );
       })}
       {filas.length === 0 && <p style={{ color: 'var(--text-dim)' }}>Sin material.</p>}
-      {perfil.rol !== 'gestor' && s.costo_total != null && <p><strong>Costo del material: {L(s.costo_total)}</strong></p>}
+      {s.costo_total != null && <p><strong>Costo del material: {L(s.costo_total)}</strong></p>}
+      <Historial id={id} session={session} refrescar={s.items.length + s.unidades + (s.estado === 'abierta' ? 1 : 0)} />
 
       {abierta && mueve && (
         <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
