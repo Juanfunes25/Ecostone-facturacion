@@ -49,7 +49,7 @@ export default function InventarioD({ session, perfil }) {
       const f = modal.form;
       const items = [{ producto_id: modal.producto.id, cantidad: Number(f.cantidad) }];
       if (f.salida_id) await api.post(`/diserco/salidas/${f.salida_id}/movimiento`, session, { items, confirmar_sin_stock: confirmar });
-      else await api.post('/diserco/salidas', session, { proyecto: f.proyecto, responsable: f.responsable, items, confirmar_sin_stock: confirmar });
+      else await api.post('/diserco/salidas', session, { proyecto: f.proyecto, items, confirmar_sin_stock: confirmar });
       setAviso(`Salida registrada: ${f.cantidad} × ${modal.producto.nombre}`);
       setModal(null);
       await cargar();
@@ -145,18 +145,17 @@ export default function InventarioD({ session, perfil }) {
       </div>
       {faltantes && <AvisoSinStock faltantes={faltantes.faltantes} accion="sacar el material" onCancelar={() => setFaltantes(null)} onContinuar={() => { setFaltantes(null); guardarProyecto(true); }} />}
       {modal && (
-        <Modal titulo={`${TIPOS[modal.tipo]} — ${modal.producto.nombre}`} onCerrar={() => setModal(null)} ancho={560} pie={<><button className="boton-md" disabled={!modal.form.cantidad || (modal.tipo === 'proyecto' ? (!modal.form.salida_id && (!modal.form.proyecto.trim() || !modal.form.responsable.trim())) : (modal.tipo !== 'ajuste' && !modal.form.costo)) || (modal.tipo === 'ajuste' && !modal.form.motivo.trim())} onClick={guardar}>Guardar</button><button className="boton-md boton-secundario" onClick={() => setModal(null)}>Cancelar</button></>}>
+        <Modal titulo={`${TIPOS[modal.tipo]} — ${modal.producto.nombre}`} onCerrar={() => setModal(null)} ancho={560} pie={<><button className="boton-md" disabled={!modal.form.cantidad || (modal.tipo === 'proyecto' ? (!modal.form.salida_id && modal.form.proyecto.trim().length < 3) : (modal.tipo !== 'ajuste' && !modal.form.costo)) || (modal.tipo === 'ajuste' && !modal.form.motivo.trim())} onClick={guardar}>Guardar</button><button className="boton-md boton-secundario" onClick={() => setModal(null)}>Cancelar</button></>}>
           <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
             {modal.tipo === 'proyecto' && (
               <>
                 <Campo etiqueta="Proyecto">
                   <select value={modal.form.salida_id} onChange={(e) => set('salida_id', e.target.value)}>
                     <option value="">➕ Proyecto nuevo…</option>
-                    {abiertas.map((s) => <option key={s.id} value={s.id}>{s.proyecto} — {s.responsable}</option>)}
+                    {abiertas.map((s) => <option key={s.id} value={s.id}>{s.proyecto}</option>)}
                   </select>
                 </Campo>
                 {!modal.form.salida_id && <Campo etiqueta="Nombre del proyecto"><input value={modal.form.proyecto} onChange={(e) => set('proyecto', e.target.value)} /></Campo>}
-                {!modal.form.salida_id && <Campo etiqueta="¿Quién se lo lleva?" ancho={200}><input value={modal.form.responsable} onChange={(e) => set('responsable', e.target.value)} /></Campo>}
               </>
             )}
             <Campo etiqueta="Cantidad (entero)" ancho={150} ayuda={modal.tipo === 'ajuste' ? 'Negativo para restar' : undefined}><input type="number" step="1" inputMode="numeric" value={modal.form.cantidad} onChange={(e) => set('cantidad', e.target.value)} autoFocus /></Campo>

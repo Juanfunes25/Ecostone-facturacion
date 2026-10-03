@@ -190,7 +190,7 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
             <tbody>
               {salidas.map((s) => (
                 <tr key={s.id}>
-                  <td>Salida #{s.numero} · {fechaCorta(s.created_at)} · {s.responsable}</td>
+                  <td>Salida #{s.numero} · {fechaCorta(s.created_at)}</td>
                   <td>{s.items.map((i) => `${num(i.pendiente, 0)} × ${i.productos?.nombre}`).join(', ')}</td>
                   <td><Etiqueta tono={s.estado === 'abierta' ? 'aviso' : 'gris'}>{s.estado === 'abierta' ? 'en curso' : 'cerrada'}</Etiqueta></td>
                   <td style={{ textAlign: 'right' }}>{L(s.costo_total)}</td>

@@ -106,7 +106,7 @@ disercoSalidas.get('/', requireRole(...LEE), async (req, res) => {
   const { data, error } = await q;
   if (error) return fallo(res, error, 500);
   const t = String(req.query.q ?? '').trim().toLowerCase();
-  res.json(data.map(resumen).filter((s) => !t || [s.proyecto, s.responsable].some((v) => String(v).toLowerCase().includes(t))).map((s) => sinCostos(req.perfil.rol, s)));
+  res.json(data.map(resumen).filter((s) => !t || [s.proyecto].some((v) => String(v).toLowerCase().includes(t))).map((s) => sinCostos(req.perfil.rol, s)));
 });
 
 disercoSalidas.get('/:id', requireRole(...LEE), async (req, res) => {
@@ -119,12 +119,21 @@ disercoSalidas.post('/', requireRole(...MUEVE), async (req, res) => {
   let creada = null;
   try {
     const proyecto = String(req.body.proyecto ?? '').trim();
-    const responsable = String(req.body.responsable ?? '').trim();
+    const responsable = req.perfil.nombre; // quién saca el material se sabe por su usuario
     if (proyecto.length < 3) throw err('Indica a qué proyecto va el material (obligatorio)');
-    if (responsable.length < 3) throw err('Escribe el nombre de quien se lleva el material (obligatorio)');
     const items = leerItems(req.body.items);
     if (items.some((i) => i.cantidad < 0)) throw err('Una salida nueva solo lleva cantidades positivas');
     const faltantes = await revisarFaltantes(items, !!req.body.confirmar_sin_stock);
+    // Un proyecto = un registro: si ya hay material abierto para ese proyecto, se suma ahí.
+    const norm = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+    const { data: abiertas } = await db.from('d_salidas').select('id, proyecto, cotizacion_id').eq('estado', 'abierta');
+    const existente = (abiertas ?? []).find((a) => (req.body.cotizacion_id && a.cotizacion_id === req.body.cotizacion_id) || norm(a.proyecto) === norm(proyecto));
+    if (existente) {
+      const salidaExistente = await cargar(existente.id);
+      for (const it of items) await mover(req, salidaExistente, it.producto_id, it.cantidad, { forzar: faltantes.length > 0 });
+      await registrarAuditoria(req, { accion: 'salida.movimiento', entidad: 'd_salida', entidadId: existente.id, sucursalId: salidaExistente.sucursal_id, detalle: { numero: salidaExistente.numero, proyecto: salidaExistente.proyecto, items } });
+      return res.status(200).json({ ...sinCostos(req.perfil.rol, await cargar(existente.id)), sumada: true });
+    }
     const ids = await sucursalesDe('diserco');
     const sucursal_id = req.perfil.sucursal_id && ids.includes(req.perfil.sucursal_id) ? req.perfil.sucursal_id : ids[0];
     const { data: salida, error } = await db.from('d_salidas').insert({ proyecto, responsable, cotizacion_id: req.body.cotizacion_id || null, notas: String(req.body.notas ?? '').trim() || null, sucursal_id, creada_por: req.perfil.id }).select().single();

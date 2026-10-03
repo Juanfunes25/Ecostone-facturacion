@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
-import Modal, { Campo, Etiqueta, Pestanas } from '../components/Modal.jsx';
+import Modal from '../components/Modal.jsx';
 import AvisoSinStock from '../components/AvisoSinStock.jsx';
 import { L, num, fechaCorta } from '../lib/fmt.js';
 
@@ -92,47 +92,46 @@ export default function SalidasD({ session, perfil }) {
       {error && <div className="error" onClick={() => setError('')}>{error}</div>}
       {aviso && <div className="aviso-ok" onClick={() => setAviso('')}>{aviso}</div>}
       {vista.tipo === 'lista' && <Lista session={session} perfil={perfil} onAbrir={(id) => setVista({ tipo: 'detalle', id })} onNueva={() => setVista({ tipo: 'nueva' })} onError={setError} />}
-      {vista.tipo === 'nueva' && <Nueva session={session} onCancelar={() => setVista({ tipo: 'lista' })} onCreada={(s) => { setAviso(`Salida #${s.numero} registrada: ${s.proyecto}`); setVista({ tipo: 'detalle', id: s.id }); }} />}
+      {vista.tipo === 'nueva' && <Nueva session={session} onCancelar={() => setVista({ tipo: 'lista' })} onCreada={(s) => { setAviso(s.sumada ? `Material sumado al proyecto: ${s.proyecto}` : `Salida registrada: ${s.proyecto}`); setVista({ tipo: 'detalle', id: s.id }); }} />}
       {vista.tipo === 'detalle' && <Detalle id={vista.id} session={session} perfil={perfil} onVolver={() => setVista({ tipo: 'lista' })} onAviso={setAviso} />}
     </div>
   );
 }
 
+const resumenItems = (items) => items.filter((i) => i.pendiente > 0).map((i) => `${num(i.pendiente, 0)} × ${i.productos?.nombre}`).join(' · ');
+
 function Lista({ session, perfil, onAbrir, onNueva, onError }) {
-  const [estado, setEstado] = useState('abierta');
-  const [q, setQ] = useState('');
   const [filas, setFilas] = useState([]);
+  const [cerrados, setCerrados] = useState(false);
   const mueve = ['admin', 'gerente', 'bodega', 'gestor'].includes(perfil.rol);
-  const verCostos = perfil.rol !== 'gestor';
-  useEffect(() => { api.get(`/diserco/salidas?estado=${estado}&q=${encodeURIComponent(q)}`, session).then(setFilas).catch((e) => onError(e.message)); }, [estado, q]);
+  useEffect(() => { api.get(`/diserco/salidas?estado=${cerrados ? 'cerrada' : 'abierta'}`, session).then(setFilas).catch((e) => onError(e.message)); }, [cerrados]);
   return (
     <div className="panel">
-      <h2>Salidas de material a proyecto</h2>
-      {mueve && <button className="boton" style={{ width: '100%', padding: '20px 16px', fontSize: '1.3rem', fontWeight: 800, marginBottom: 12 }} onClick={onNueva}>+ SACAR MATERIAL A PROYECTO</button>}
-      <Pestanas activa={estado} onCambiar={setEstado} items={[{ id: 'abierta', etiqueta: 'En curso' }, { id: 'cerrada', etiqueta: 'Cerrados' }]} />
-      <input placeholder="Buscar proyecto o responsable…" value={q} onChange={(e) => setQ(e.target.value)} />
-      <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+      {mueve && <button className="boton" style={{ width: '100%', padding: '22px 16px', fontSize: '1.35rem', fontWeight: 800 }} onClick={onNueva}>📦 SACAR MATERIAL A UN PROYECTO</button>}
+      <h3 style={{ marginBottom: 6 }}>{cerrados ? 'Proyectos cerrados' : 'Material que está en proyectos'}</h3>
+      <div style={{ display: 'grid', gap: 10 }}>
         {filas.map((s) => (
           <button key={s.id} className="boton-secundario" style={{ textAlign: 'left', padding: 14 }} onClick={() => onAbrir(s.id)}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-              <strong style={{ fontSize: '1.1rem' }}>{s.proyecto}</strong>
-              <span>#{s.numero} · {fechaCorta(s.created_at)}</span>
-            </div>
-            <small style={{ display: 'block', color: 'var(--text-dim)' }}>Se lo llevó: {s.responsable}{s.cotizacion?.codigo ? ` · Cot. ${s.cotizacion.codigo}` : ''}</small>
-            <small style={{ display: 'block' }}>{s.items.length} producto{s.items.length === 1 ? '' : 's'} · {num(s.unidades, 0)} {estado === 'abierta' ? 'en el proyecto' : 'consumidas'}{verCostos && s.costo_total != null ? ` · costo ${L(s.costo_total)}` : ''}</small>
+            <strong style={{ fontSize: '1.15rem', display: 'block' }}>{s.proyecto}</strong>
+            <small style={{ display: 'block', margin: '4px 0' }}>{resumenItems(s.items) || 'Sin material pendiente'}</small>
+            <small style={{ color: 'var(--text-dim)' }}>{num(s.unidades, 0)} unidades · desde {fechaCorta(s.created_at)}{perfil.rol !== 'gestor' && s.costo_total != null ? ` · ${L(s.costo_total)}` : ''}</small>
           </button>
         ))}
-        {filas.length === 0 && <p style={{ color: 'var(--text-dim)', textAlign: 'center' }}>{estado === 'abierta' ? 'No hay material fuera en este momento.' : 'Aún no hay proyectos cerrados.'}</p>}
+        {filas.length === 0 && <p style={{ color: 'var(--text-dim)', textAlign: 'center' }}>{cerrados ? 'Aún no hay proyectos cerrados.' : 'No hay material fuera en este momento.'}</p>}
       </div>
+      <button className="boton-sm boton-secundario" style={{ marginTop: 14 }} onClick={() => setCerrados(!cerrados)}>{cerrados ? '← Ver proyectos en curso' : 'Ver proyectos cerrados'}</button>
     </div>
   );
 }
 
 function Nueva({ session, onCancelar, onCreada }) {
   const [productos, setProductos] = useState([]);
-  const [proyectos, setProyectos] = useState([]);
+  const [abiertos, setAbiertos] = useState([]);
+  const [cotizaciones, setCotizaciones] = useState([]);
   const [previas, setPrevias] = useState([]);
-  const [f, setF] = useState({ proyecto: '', cotizacion_id: '', responsable: '', notas: '' });
+  const [proyecto, setProyecto] = useState(null); // { nombre, cotizacion_id }
+  const [otro, setOtro] = useState(false);
+  const [texto, setTexto] = useState('');
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -141,27 +140,26 @@ function Nueva({ session, onCancelar, onCreada }) {
 
   useEffect(() => {
     api.get('/diserco/inventario', session).then(setProductos).catch((e) => setError(e.message));
-    api.get('/diserco/salidas/proyectos', session).then(setProyectos).catch(() => {});
-    api.get('/diserco/salidas', session).then(setPrevias).catch(() => {});
+    api.get('/diserco/salidas?estado=abierta', session).then((r) => { setAbiertos(r); setPrevias(r); }).catch(() => {});
+    api.get('/diserco/salidas/proyectos', session).then(setCotizaciones).catch(() => {});
+    api.get('/diserco/salidas?estado=cerrada', session).then((r) => setPrevias((p) => [...p, ...r])).catch(() => {});
   }, []);
-  const responsables = useMemo(() => [...new Set(previas.map((s) => s.responsable))], [previas]);
   const frecuentes = useMemo(() => {
     const cuenta = new Map();
     for (const s of previas) for (const i of s.items) cuenta.set(i.producto_id, (cuenta.get(i.producto_id) ?? 0) + 1);
     return [...cuenta].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id]) => id);
   }, [previas]);
+  const nombresAbiertos = new Set(abiertos.map((a) => a.proyecto));
+  const deCotizacion = cotizaciones.filter((c) => !nombresAbiertos.has(`${c.proyecto} — ${c.nombre_cliente}`));
 
-  const faltaProyecto = f.proyecto.trim().length < 3;
-  const faltaResponsable = f.responsable.trim().length < 3;
-  const incompleto = faltaProyecto || faltaResponsable || items.length === 0;
-
+  const sinProyecto = !proyecto || proyecto.nombre.trim().length < 3;
   async function guardar(confirmar) {
     setIntento(true);
-    if (incompleto) return;
+    if (sinProyecto || items.length === 0) return;
     setError('');
     setGuardando(true);
     try {
-      onCreada(await api.post('/diserco/salidas', session, { ...f, items, confirmar_sin_stock: confirmar }));
+      onCreada(await api.post('/diserco/salidas', session, { proyecto: proyecto.nombre.trim(), cotizacion_id: proyecto.cotizacion_id || '', items, confirmar_sin_stock: confirmar }));
     } catch (e) {
       if (e.codigo === 'SIN_STOCK') setFaltantes(e.faltantes ?? []);
       else setError(e.message);
@@ -169,33 +167,46 @@ function Nueva({ session, onCancelar, onCreada }) {
       setGuardando(false);
     }
   }
-  const rojo = (malo) => (intento && malo ? { borderColor: 'var(--peligro)', borderWidth: 2 } : undefined);
+  const tarjeta = (activo) => ({ textAlign: 'left', padding: '12px 14px', borderRadius: 10, ...(activo ? { outline: '3px solid var(--color-sucursal)' } : {}) });
 
   return (
     <div className="panel">
       {faltantes && <AvisoSinStock faltantes={faltantes} accion="registrar la salida" onCancelar={() => setFaltantes(null)} onContinuar={() => { setFaltantes(null); guardar(true); }} />}
-      <h2>Sacar material a proyecto</h2>
-      {error && <div className="error" onClick={() => setError('')}>{error}</div>}
-      <Campo etiqueta="1 · Proyecto (obligatorio)" ayuda={intento && faltaProyecto ? '⚠ Indica a qué proyecto va' : 'Elige uno de la lista o escribe el nombre'}>
-        <input list="proyectos-d" value={f.proyecto} placeholder="Ej.: Nave #7 Honduras Kitting" style={rojo(faltaProyecto)} onChange={(e) => {
-          const c = proyectos.find((x) => `${x.proyecto} — ${x.nombre_cliente} (${x.codigo})` === e.target.value);
-          setF(c ? { ...f, proyecto: `${c.proyecto} — ${c.nombre_cliente}`, cotizacion_id: c.id } : { ...f, proyecto: e.target.value, cotizacion_id: '' });
-        }} />
-        <datalist id="proyectos-d">{proyectos.map((c) => <option key={c.id} value={`${c.proyecto} — ${c.nombre_cliente} (${c.codigo})`} />)}</datalist>
-      </Campo>
-      <div style={{ height: 8 }} />
-      <Campo etiqueta="2 · ¿Quién se lleva el material? (obligatorio)" ayuda={intento && faltaResponsable ? '⚠ Escribe el nombre de quien se lo lleva' : undefined}>
-        <input list="responsables-d" value={f.responsable} placeholder="Nombre del empleado" style={rojo(faltaResponsable)} onChange={(e) => setF({ ...f, responsable: e.target.value })} />
-        <datalist id="responsables-d">{responsables.map((r) => <option key={r} value={r} />)}</datalist>
-      </Campo>
-      <h3 style={{ marginBottom: 6 }}>3 · Material {intento && items.length === 0 && <span style={{ color: 'var(--peligro)', fontSize: '0.8em' }}>⚠ agrega al menos un producto</span>}</h3>
-      <SelectorProductos productos={productos} items={items} onCambiar={setItems} frecuentes={frecuentes} />
-      <div style={{ height: 8 }} />
-      <Campo etiqueta="Notas (opcional)"><input value={f.notas} onChange={(e) => setF({ ...f, notas: e.target.value })} /></Campo>
-      <div className="toolbar" style={{ marginTop: 14 }}>
-        <button className="boton" style={{ flex: 1, padding: '18px 22px', fontSize: '1.2rem', fontWeight: 800 }} disabled={guardando} onClick={() => guardar(false)}>{guardando ? 'Registrando…' : `REGISTRAR SALIDA${items.length ? ` (${items.reduce((s, i) => s + i.cantidad, 0)} unidades)` : ''}`}</button>
-        <button className="boton-md boton-secundario" onClick={onCancelar}>Cancelar</button>
+      <div className="toolbar" style={{ justifyContent: 'space-between' }}>
+        <h2 style={{ margin: 0 }}>Sacar material</h2>
+        <button className="boton-sm boton-secundario" onClick={onCancelar}>← Volver</button>
       </div>
+      {error && <div className="error" onClick={() => setError('')}>{error}</div>}
+
+      <h3 style={{ marginBottom: 6 }}>1 · ¿A qué proyecto va? {intento && sinProyecto && <span style={{ color: 'var(--peligro)', fontSize: '0.8em' }}>⚠ elige un proyecto</span>}</h3>
+      {proyecto && !otro ? (
+        <div className="boton" style={{ padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <strong>✓ {proyecto.nombre}</strong>
+          <button className="boton-sm boton-secundario" onClick={() => setProyecto(null)}>Cambiar</button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 8, ...(intento && sinProyecto ? { outline: '2px solid var(--peligro)', padding: 6, borderRadius: 10 } : {}) }}>
+          {abiertos.length > 0 && <small style={{ color: 'var(--text-dim)' }}>Proyectos en curso (se suma al mismo registro):</small>}
+          {abiertos.map((a) => <button key={a.id} className="boton-secundario" style={tarjeta(proyecto?.nombre === a.proyecto)} onClick={() => { setProyecto({ nombre: a.proyecto, cotizacion_id: a.cotizacion_id }); setOtro(false); }}>{a.proyecto}</button>)}
+          {deCotizacion.length > 0 && <small style={{ color: 'var(--text-dim)' }}>Cotizaciones de proyecto aprobadas:</small>}
+          {deCotizacion.slice(0, 8).map((c) => <button key={c.id} className="boton-secundario" style={tarjeta(false)} onClick={() => { setProyecto({ nombre: `${c.proyecto} — ${c.nombre_cliente}`, cotizacion_id: c.id }); setOtro(false); }}>{c.proyecto} <small style={{ opacity: 0.75 }}>— {c.nombre_cliente} ({c.codigo})</small></button>)}
+          {!otro
+            ? <button className="boton-sm boton-secundario" onClick={() => setOtro(true)}>+ Escribir otro proyecto</button>
+            : (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input autoFocus placeholder="Nombre del proyecto" value={texto} onChange={(e) => setTexto(e.target.value)} />
+                <button className="boton-md" disabled={texto.trim().length < 3} onClick={() => { setProyecto({ nombre: texto.trim(), cotizacion_id: '' }); setOtro(false); }}>OK</button>
+              </div>
+            )}
+        </div>
+      )}
+
+      <h3 style={{ marginBottom: 6 }}>2 · ¿Qué material? {intento && items.length === 0 && <span style={{ color: 'var(--peligro)', fontSize: '0.8em' }}>⚠ agrega al menos un producto</span>}</h3>
+      <SelectorProductos productos={productos} items={items} onCambiar={setItems} frecuentes={frecuentes} />
+
+      <button className="boton" style={{ width: '100%', marginTop: 16, padding: '18px 22px', fontSize: '1.2rem', fontWeight: 800 }} disabled={guardando} onClick={() => guardar(false)}>
+        {guardando ? 'Registrando…' : `REGISTRAR SALIDA${items.length ? ` (${items.reduce((s, i) => s + i.cantidad, 0)})` : ''}`}
+      </button>
     </div>
   );
 }
@@ -239,7 +250,7 @@ function Detalle({ id, session, perfil, onVolver, onAviso }) {
     try {
       setS(await api.post(`/diserco/salidas/${id}/cerrar`, session, { sobrante }));
       setCerrando(false);
-      onAviso(sobrante === 'devolver' ? 'Proyecto cerrado; el sobrante regresó a bodega' : 'Proyecto cerrado; el material se dio por consumido');
+      onAviso(sobrante === 'devolver' ? 'Proyecto terminado: lo que sobró regresó a la bodega' : 'Proyecto terminado: todo el material se usó');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -250,61 +261,65 @@ function Detalle({ id, session, perfil, onVolver, onAviso }) {
   if (!s) return <div className="panel">{error ? <div className="error">{error}</div> : 'Cargando…'}</div>;
   const abierta = s.estado === 'abierta';
   const hayEnBodega = new Map(productos.map((p) => [p.id, p.existencia]));
+  const filas = s.items.filter((i) => i.pendiente > 0 || i.cantidad_salida > 0);
 
   return (
     <div className="panel">
       {faltantes && <AvisoSinStock faltantes={faltantes.faltantes} accion="sacar el material" onCancelar={() => setFaltantes(null)} onContinuar={() => { const it = faltantes.items; setFaltantes(null); mover(it, true); }} />}
       <div className="toolbar" style={{ justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>{s.proyecto} <Etiqueta tono={abierta ? 'aviso' : 'gris'}>{abierta ? 'en curso' : 'cerrado'}</Etiqueta></h2>
+        <h2 style={{ margin: 0 }}>{s.proyecto}</h2>
         <button className="boton-sm boton-secundario" onClick={onVolver}>← Volver</button>
       </div>
-      <p style={{ margin: '6px 0' }}>Salida #{s.numero} · {fechaCorta(s.created_at)} · Se lo llevó: <strong>{s.responsable}</strong>{s.cotizacion?.codigo && ` · Cotización ${s.cotizacion.codigo}`}{s.notas && ` · ${s.notas}`}</p>
+      <p style={{ margin: '4px 0 10px', color: 'var(--text-dim)' }}>{abierta ? 'Material que está en este proyecto' : 'Proyecto terminado · material usado'} · desde {fechaCorta(s.created_at)}{s.cotizacion?.codigo ? ` · Cot. ${s.cotizacion.codigo}` : ''}</p>
       {error && <div className="error" onClick={() => setError('')}>{error}</div>}
-      {abierta && mueve && <p style={{ color: 'var(--text-dim)', margin: '4px 0' }}>Usa <strong>+</strong> para sacar más de la bodega y <strong>−</strong> para devolver a la bodega.</p>}
 
-      {s.items.map((i) => {
+      {filas.map((i) => {
         const c = Math.max(1, Number(cant[i.producto_id]) || 1);
         return (
-          <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 180px', minWidth: 0 }}>
-              <strong>{i.productos?.nombre}</strong>
-              <small style={{ display: 'block', color: 'var(--text-dim)' }}>Salió {num(i.cantidad_salida, 0)} · devuelto {num(i.cantidad_retorno, 0)} · en bodega {num(hayEnBodega.get(i.producto_id) ?? 0, 0)}</small>
-            </div>
-            <div style={{ textAlign: 'center', minWidth: 70 }}>
-              <strong style={{ fontSize: '2rem', color: 'var(--aviso)', lineHeight: 1 }}>{num(i.pendiente, 0)}</strong>
-              <small style={{ display: 'block', color: 'var(--text-dim)' }}>{abierta ? 'en el proyecto' : 'consumido'}</small>
+          <div key={i.id} style={{ padding: '12px 0', borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+              <div style={{ minWidth: 0 }}>
+                <strong>{i.productos?.nombre}</strong>
+                {abierta && <small style={{ display: 'block', color: 'var(--text-dim)' }}>En bodega: {num(hayEnBodega.get(i.producto_id) ?? 0, 0)}</small>}
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <strong style={{ fontSize: '2.2rem', lineHeight: 1, color: 'var(--aviso)' }}>{num(i.pendiente, 0)}</strong>
+                <small style={{ display: 'block', color: 'var(--text-dim)' }}>{abierta ? 'en el proyecto' : 'usadas'}</small>
+              </div>
             </div>
             {abierta && mueve && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <button className="boton-secundario" style={paso} disabled={ocupado || c > i.pendiente} title="Devolver a bodega" onClick={() => mover([{ producto_id: i.producto_id, cantidad: -c }])}>−</button>
-                <input type="number" inputMode="numeric" min="1" step="1" value={cant[i.producto_id] ?? 1} onChange={(e) => setCant({ ...cant, [i.producto_id]: e.target.value })} style={{ width: 64, textAlign: 'center', fontWeight: 800, fontSize: '1.2rem' }} />
-                <button className="boton" style={paso} disabled={ocupado} title="Sacar más de la bodega" onClick={() => mover([{ producto_id: i.producto_id, cantidad: c }])}>+</button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', marginTop: 8 }}>
+                <button className="boton-secundario" style={{ flex: 1, minHeight: 52, fontWeight: 700 }} disabled={ocupado || c > i.pendiente} onClick={() => mover([{ producto_id: i.producto_id, cantidad: -c }])}>− Devolver</button>
+                <input type="number" inputMode="numeric" min="1" step="1" value={cant[i.producto_id] ?? 1} onChange={(e) => setCant({ ...cant, [i.producto_id]: e.target.value })} style={{ width: 70, textAlign: 'center', fontWeight: 800, fontSize: '1.3rem' }} />
+                <button className="boton" style={{ flex: 1, minHeight: 52, fontWeight: 700 }} disabled={ocupado} onClick={() => mover([{ producto_id: i.producto_id, cantidad: c }])}>+ Sacar más</button>
               </div>
             )}
           </div>
         );
       })}
-      {s.costo_total != null && <p><strong>Costo del material {abierta ? 'en el proyecto' : 'consumido'}: {L(s.costo_total)}</strong> <small style={{ color: 'var(--text-dim)' }}>(al costo promedio de bodega)</small></p>}
+      {filas.length === 0 && <p style={{ color: 'var(--text-dim)' }}>Sin material.</p>}
+      {perfil.rol !== 'gestor' && s.costo_total != null && <p><strong>Costo del material: {L(s.costo_total)}</strong></p>}
+
       {abierta && mueve && (
-        <div className="toolbar" style={{ flexWrap: 'wrap', marginTop: 10 }}>
-          <button className="boton" style={{ padding: '14px 20px', fontWeight: 800 }} onClick={() => { setNuevos([]); setAgregando(true); }}>+ AGREGAR OTRO PRODUCTO</button>
-          <button className="boton-md boton-secundario" onClick={() => setCerrando(true)}>Cerrar proyecto</button>
+        <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
+          <button className="boton" style={{ padding: '16px', fontWeight: 800, fontSize: '1.1rem' }} onClick={() => { setNuevos([]); setAgregando(true); }}>+ AGREGAR OTRO PRODUCTO</button>
+          <button className="boton-md boton-secundario" onClick={() => setCerrando(true)}>✔ Terminar proyecto</button>
         </div>
       )}
-      {!abierta && gerencia && <button className="boton-md boton-secundario" onClick={async () => { try { setS(await api.post(`/diserco/salidas/${id}/reabrir`, session, {})); } catch (e) { setError(e.message); } }}>Reabrir</button>}
+      {!abierta && gerencia && <button className="boton-md boton-secundario" onClick={async () => { try { setS(await api.post(`/diserco/salidas/${id}/reabrir`, session, {})); } catch (e) { setError(e.message); } }}>Reabrir proyecto</button>}
       {agregando && (
-        <Modal titulo="Agregar material al proyecto" onCerrar={() => setAgregando(false)} pie={<><button className="boton" style={{ padding: '14px 20px', fontWeight: 800 }} disabled={!nuevos.length || ocupado} onClick={async () => { if (await mover(nuevos)) setAgregando(false); }}>SACAR DE BODEGA</button><button className="boton-md boton-secundario" onClick={() => setAgregando(false)}>Cancelar</button></>}>
+        <Modal titulo="Agregar material" onCerrar={() => setAgregando(false)} pie={<><button className="boton" style={{ padding: '14px 20px', fontWeight: 800 }} disabled={!nuevos.length || ocupado} onClick={async () => { if (await mover(nuevos)) setAgregando(false); }}>SACAR DE BODEGA</button><button className="boton-md boton-secundario" onClick={() => setAgregando(false)}>Cancelar</button></>}>
           <SelectorProductos productos={productos} items={nuevos} onCambiar={setNuevos} />
         </Modal>
       )}
       {cerrando && (
-        <Modal titulo="Cerrar proyecto" onCerrar={() => setCerrando(false)} ancho={520}>
-          <p>Material que sigue en el proyecto: <strong>{num(s.unidades, 0)} unidades</strong>.</p>
+        <Modal titulo="Terminar proyecto" onCerrar={() => setCerrando(false)} ancho={520}>
+          <p>Todavía hay <strong>{num(s.unidades, 0)} unidades</strong> en el proyecto. ¿Qué pasó con ellas?</p>
           <div style={{ display: 'grid', gap: 10 }}>
-            <button className="boton-md" disabled={ocupado} onClick={() => cerrar('devolver')}>Lo que sobró REGRESA a bodega (queda disponible para vender)</button>
-            <button className="boton-md boton-secundario" disabled={ocupado} onClick={() => cerrar('consumido')}>Todo se CONSUMIÓ en el proyecto</button>
+            <button className="boton-md" disabled={ocupado} onClick={() => cerrar('devolver')}>Sobró material → REGRESA a la bodega</button>
+            <button className="boton-md boton-secundario" disabled={ocupado} onClick={() => cerrar('consumido')}>Todo se USÓ en el proyecto</button>
           </div>
-          <small style={{ color: 'var(--text-dim)' }}>Si solo regresó una parte, primero resta con el botón − lo que volvió a bodega y luego cierra como “consumido”.</small>
+          <small style={{ color: 'var(--text-dim)' }}>Si volvió solo una parte, primero usa “− Devolver” en cada producto y luego termina el proyecto.</small>
         </Modal>
       )}
     </div>
