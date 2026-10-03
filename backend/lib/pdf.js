@@ -50,6 +50,7 @@ export function generarPdfFactura(venta, res) {
     doc.text(`Rango autorizado: ${prefijo}${num8(pe.correlativo_desde)} a ${num8(pe.correlativo_hasta)}`, 430, doc.y + 2, { width: 142 });
   }
 
+  const rotulo = emp.codigo === 'diserco' ? 'Importe' : 'Total';
   let y = 128;
   if (borrador) {
     doc.font('Helvetica-Bold').fontSize(10).fillColor('red').text('DOCUMENTO SIN VALIDEZ FISCAL — CAI pendiente de confirmar con el SAR', izq, y, { width: der - izq, align: 'center' }).fillColor('black');
@@ -110,9 +111,9 @@ export function generarPdfFactura(venta, res) {
     doc.text(lempiras(monto), colTotal.x - 10, y, { width: colTotal.w + 10, align: 'right' });
     y += 16;
   };
-  fila('Total Venta Exento', venta.subtotal_exento);
-  fila('Total Venta Exonerada', venta.subtotal_exonerado);
-  fila('Total Venta ISV - 15%', venta.subtotal_gravado_15);
+  fila(`${rotulo} Venta Exento`, venta.subtotal_exento);
+  fila(`${rotulo} Venta Exonerada`, venta.subtotal_exonerado);
+  fila(`${rotulo} Venta ISV - 15%`, venta.subtotal_gravado_15);
   fila('ISV - 15%', venta.isv_total);
   fila('Descuentos y Rebajas', descuentos);
   y += 2;
