@@ -3,6 +3,9 @@ import { supabase } from './supabaseClient.js';
 import { api } from './api.js';
 import { colorSucursal, nombreCortoSucursal, registrarColoresSucursales } from './lib/coloresSucursal.js';
 const SelectorEmpresa = lazy(() => import('./screens/SelectorEmpresa.jsx'));
+const CotizacionesD = lazy(() => import('./screens/CotizacionesD.jsx'));
+const CatalogoD = lazy(() => import('./screens/CatalogoD.jsx'));
+const InventarioD = lazy(() => import('./screens/InventarioD.jsx'));
 const Pos = lazy(() => import('./screens/Pos.jsx'));
 const Facturas = lazy(() => import('./screens/Facturas.jsx'));
 const Piedra = lazy(() => import('./screens/Piedra.jsx'));
@@ -96,6 +99,9 @@ function PantallaLogin({ onEntrar }) {
 }
 
 const PANTALLAS = [
+  { id: 'd-cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], empresas: ['diserco'], Componente: CotizacionesD },
+  { id: 'd-catalogo', etiqueta: 'Productos', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: CatalogoD },
+  { id: 'd-inventario', etiqueta: 'Inventario', grupo: 'Negocio', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas', 'bodega'], empresas: ['diserco'], Componente: InventarioD },
   { id: 'cotizaciones', etiqueta: 'Cotizaciones', grupo: 'Operación', roles: ['admin', 'gerente', 'vendedor', 'cajero', 'ventas'], empresas: ['ecostone'], Componente: Cotizaciones },
   { id: 'pos', etiqueta: 'Venta Directa', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], empresas: ['ecostone'], Componente: Pos },
   { id: 'facturas', etiqueta: 'Facturas', grupo: 'Operación', roles: ['admin', 'gerente', 'cajero', 'ventas'], empresas: ['diserco', 'ecostone'], Componente: Facturas },
@@ -260,7 +266,7 @@ function PantallaApp({ session, onSalir }) {
       for (const f of [() => import('./screens/Cotizaciones.jsx'), () => import('./screens/CotizacionEditor.jsx'), () => import('./screens/Pos.jsx'), () => import('./screens/Facturas.jsx'), () => import('./screens/Inventario.jsx'), () => import('./screens/Clientes.jsx')]) f().catch(() => {});
     }, 1500);
     return () => clearTimeout(t);
-  }, [perfil?.id]);
+  }, [perfil?.id, empresa]);
 
   // Contador de alertas antifraude sin revisar (sólo administradores).
   useEffect(() => {

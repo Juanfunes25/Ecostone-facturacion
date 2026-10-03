@@ -4,6 +4,7 @@
 // fetch y se muestran/imprimen desde un blob.
 
 import { idDispositivo } from './dispositivo.js';
+import { empresaActiva } from './empresa.js';
 
 const CLAVE_CONFIG = 'ecostone-facturacion:impresora';
 const CONFIG_DEFECTO = { columnas: 48, autoImprimir: true };
@@ -35,7 +36,7 @@ export function guardarConfigImpresora(config) {
 async function pedir(path, session) {
   let res;
   try {
-    res = await fetch(`/api${path}`, { headers: { Authorization: `Bearer ${session.access_token}`, 'X-Dispositivo': idDispositivo() } });
+    res = await fetch(`/api${path}`, { headers: { Authorization: `Bearer ${session.access_token}`, 'X-Dispositivo': idDispositivo(), 'X-Empresa': empresaActiva() } });
   } catch {
     throw new Error('Sin conexión con el servidor. Revisa el internet e intenta de nuevo.');
   }

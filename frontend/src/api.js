@@ -58,6 +58,8 @@ export const api = {
   // Calienta la memoria apenas se entra, para que cotizar/vender abra al instante.
   precargar(session, rol) {
     if (rol === 'produccion') return;
-    for (const r of ['/clientes?todos=1', '/productos', '/listas-precio', '/listas-precio/precios', '/insumos/parametros', '/formas-pago', '/categorias']) enMemoria(r, session).catch(() => {});
+    const comunes = ['/clientes?todos=1', '/formas-pago', '/categorias'];
+    const propias = empresaActiva() === 'diserco' ? ['/diserco/productos'] : ['/productos', '/listas-precio', '/listas-precio/precios', '/insumos/parametros'];
+    for (const r of [...comunes, ...propias]) enMemoria(r, session).catch(() => {});
   },
 };

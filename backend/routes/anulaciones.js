@@ -29,6 +29,12 @@ anulaciones.post('/', requireRole('admin'), async (req, res) => {
   } catch (e) {
     console.error('anulación: reponer inventario', venta_id, e.message);
   }
+  // Cobro de una cotización DISERCO: el cobro queda anulado y la cotización vuelve a "aprobada".
+  const { data: cobros } = await db.from('d_cotizacion_pagos').select('id, cotizacion_id').eq('venta_id', venta_id);
+  for (const c of cobros ?? []) {
+    await db.from('d_cotizacion_pagos').update({ anulado: true }).eq('id', c.id);
+    await db.from('d_cotizaciones').update({ estado: 'aprobada', updated_at: new Date().toISOString() }).eq('id', c.cotizacion_id).eq('estado', 'facturada');
+  }
   if (venta.cotizacion_id) {
     await db.from('cotizaciones').update({ estado: 'anulada', motivo_cierre: `Factura ${venta.numero_factura} anulada: ${motivo}`, updated_at: new Date().toISOString() }).eq('id', venta.cotizacion_id);
   }

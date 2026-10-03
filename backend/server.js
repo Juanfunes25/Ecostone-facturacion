@@ -30,6 +30,8 @@ import { trazabilidad } from './routes/trazabilidad.js';
 import { todasLasEmpresas } from './lib/empresas.js';
 import { iniciarLiberacionAutomatica } from './lib/colada.js';
 import { antifraude } from './routes/antifraude.js';
+import { disercoCotizaciones } from './routes/disercoCotizaciones.js';
+import { disercoCatalogo } from './routes/disercoCatalogo.js';
 import { requireRole } from './middleware/requireRole.js';
 import { registrarAuditoria } from './lib/auditoria.js';
 import { iniciarVigilancia, registrarLoginFallido } from './lib/antifraude.js';
@@ -116,6 +118,13 @@ app.use('/api/inventario', inventario);
 app.use('/api/cotizaciones', cotizaciones);
 app.use('/api', catalogoFabrica);
 app.use('/api/antifraude', antifraude);
+// DISERCO: solo para quien tiene acceso a esa empresa y la está usando.
+app.use('/api/diserco', (req, res, next) => {
+  if (req.empresa !== 'diserco') return res.status(403).json({ error: 'Entra a DISERCO para usar esta sección' });
+  next();
+});
+app.use('/api/diserco/cotizaciones', disercoCotizaciones);
+app.use('/api/diserco', disercoCatalogo);
 
 // Sirve el build del frontend (un solo servicio Render, backend + frontend estático).
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');

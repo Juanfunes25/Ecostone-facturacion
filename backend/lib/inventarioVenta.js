@@ -33,7 +33,7 @@ async function lotesDisponibles(productoId) {
 }
 
 // Antes de emitir la factura: que la piedra exista. No consume nada.
-export async function verificarInventarioVenta(venta) {
+async function verificarPiedra(venta) {
   const demanda = await demandaDeVenta(venta.id);
   for (const [productoId, { nombre, m2 }] of demanda) {
     const reservado = (await reservasDeCotizacion(venta.cotizacion_id, productoId)).reduce((s, r) => s + r.m2, 0);
@@ -46,7 +46,7 @@ export async function verificarInventarioVenta(venta) {
 
 // Al emitir la factura: la piedra sale del inventario (primero lo reservado
 // para esa cotización, luego FIFO por lote).
-export async function descontarInventarioVenta(req, venta, numeroFactura) {
+async function descontarPiedra(req, venta, numeroFactura) {
   const demanda = await demandaDeVenta(venta.id);
   const usuario = req.perfil?.id ?? null;
   const motivo = `Factura ${numeroFactura}`;
@@ -75,11 +75,68 @@ export async function descontarInventarioVenta(req, venta, numeroFactura) {
 }
 
 // Anulación de la factura: lo descontado regresa a su mismo lote.
-export async function reponerInventarioVenta(req, venta) {
+async function reponerPiedra(req, venta) {
   const { data } = await db.from('movimientos_pt').select('producto_id, lote, calidad, m2').eq('venta_id', venta.id).eq('tipo', 'venta');
   for (const m of data ?? []) {
     const { error } = await db.rpc('pt_registrar_movimiento', { p_producto: m.producto_id, p_lote: m.lote, p_calidad: m.calidad, p_tipo: 'ajuste', p_m2: -Number(m.m2), p_costo: 0, p_motivo: `Anulación de factura ${venta.numero_factura}`, p_venta: venta.id, p_usuario: req.perfil?.id ?? null });
     if (error) throw new Error(error.message);
   }
   return (data ?? []).length;
+}
+
+// ── Inventario general (productos de DISERCO que controlan existencias) ─────
+async function demandaGeneral(ventaId) {
+  const { data: lineas } = await db.from('detalle_venta').select('producto_id, cantidad, productos(nombre, controla_inventario, empresa)').eq('venta_id', ventaId);
+  const mapa = new Map();
+  for (const l of lineas ?? []) {
+    if (!l.producto_id || !l.productos?.controla_inventario) continue;
+    const previo = mapa.get(l.producto_id) ?? { nombre: l.productos.nombre, cantidad: 0 };
+    previo.cantidad += Number(l.cantidad);
+    mapa.set(l.producto_id, previo);
+  }
+  return mapa;
+}
+
+async function verificarGeneral(venta) {
+  const demanda = await demandaGeneral(venta.id);
+  if (!demanda.size) return;
+  const { data: stock } = await db.from('inv_stock').select('producto_id, existencia').in('producto_id', [...demanda.keys()]);
+  const hay = new Map((stock ?? []).map((x) => [x.producto_id, Number(x.existencia)]));
+  for (const [id, { nombre, cantidad }] of demanda) {
+    const existencia = hay.get(id) ?? 0;
+    if (existencia + 1e-9 < cantidad) throw Object.assign(new Error(`No hay suficiente inventario de ${nombre}: se facturan ${cantidad} y hay ${Math.floor(existencia)}. Registra la compra o ajusta el inventario antes de facturar.`), { status: 409 });
+  }
+}
+
+async function descontarGeneral(req, venta, numeroFactura) {
+  const demanda = await demandaGeneral(venta.id);
+  for (const [id, { cantidad }] of demanda) {
+    const { error } = await db.rpc('inv_registrar', { p_producto: id, p_tipo: 'venta', p_cantidad: -cantidad, p_costo: 0, p_motivo: `Factura ${numeroFactura}`, p_venta: venta.id, p_proveedor: null, p_referencia: null, p_usuario: req.perfil?.id ?? null });
+    if (error) throw new Error(error.message);
+  }
+  return demanda.size;
+}
+
+async function reponerGeneral(req, venta) {
+  const { data } = await db.from('inv_movimientos').select('producto_id, cantidad').eq('venta_id', venta.id).eq('tipo', 'venta');
+  for (const m of data ?? []) {
+    const { error } = await db.rpc('inv_registrar', { p_producto: m.producto_id, p_tipo: 'devolucion', p_cantidad: -Number(m.cantidad), p_costo: 0, p_motivo: `Anulación de factura ${venta.numero_factura}`, p_venta: venta.id, p_proveedor: null, p_referencia: null, p_usuario: req.perfil?.id ?? null });
+    if (error) throw new Error(error.message);
+  }
+  return (data ?? []).length;
+}
+
+export async function verificarInventarioVenta(venta) {
+  await verificarPiedra(venta);
+  await verificarGeneral(venta);
+}
+export async function descontarInventarioVenta(req, venta, numeroFactura) {
+  const a = await descontarPiedra(req, venta, numeroFactura);
+  const b = await descontarGeneral(req, venta, numeroFactura);
+  return a + b;
+}
+export async function reponerInventarioVenta(req, venta) {
+  const a = await reponerPiedra(req, venta);
+  const b = await reponerGeneral(req, venta);
+  return a + b;
 }

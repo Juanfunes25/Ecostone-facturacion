@@ -35,8 +35,10 @@ const TRAZOS = {
   dinero: ['M2 6h20v12H2z', 'M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z', 'M6 12h.01', 'M18 12h.01'],
 };
 
+const ALIAS = { 'd-cotizaciones': 'cotizaciones', 'd-catalogo': 'catalogo', 'd-inventario': 'inventario' };
+
 export default function Icono({ nombre, tam = 20, grosor = 1.8, className }) {
-  const trazos = TRAZOS[nombre] ?? TRAZOS.dashboard;
+  const trazos = TRAZOS[ALIAS[nombre] ?? nombre] ?? TRAZOS.dashboard;
   return (
     <svg
       className={className}

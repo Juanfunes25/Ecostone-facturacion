@@ -172,3 +172,32 @@ export async function enviarFacturaCliente(venta, pdfBuffer) {
     return { enviado: false, motivo: e.message };
   }
 }
+
+// Cotización de DISERCO por correo (PDF adjunto).
+export async function enviarCotizacionDiserco(cot, pdfBuffer, destinatario) {
+  if (!transportadorDisponible()) return { enviado: false, motivo: 'GMAIL_USER/GMAIL_APP_PASSWORD no configurados' };
+  if (!destinatario) return { enviado: false, motivo: 'El cliente no tiene correo registrado' };
+  const esc = (t) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const total = `L ${Number(cot.total).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`;
+  const cuerpo = `
+  <div style="background:#f6f1ec;padding:24px 0;font-family:Arial,sans-serif">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden">
+      <tr><td style="background:#e8762b;padding:22px 28px">
+        <div style="color:#fff;font-size:28px;font-weight:800;letter-spacing:3px">DISERCO</div>
+        <div style="color:#fff;font-size:11px;letter-spacing:4px">EXPERTOS EN PISOS</div>
+      </td></tr>
+      <tr><td style="padding:26px 28px;color:#1c1d1f">
+        <p style="font-size:18px;font-weight:700;margin:0 0 8px">Hola, ${esc((cot.contacto || cot.nombre_cliente || '').split(' ')[0])}</p>
+        <p style="font-size:14px;color:#555;line-height:1.5;margin:0 0 18px">Gracias por considerarnos${cot.proyecto ? ` para <strong style="color:#1c1d1f">${esc(cot.proyecto)}</strong>` : ''}. Te adjuntamos la cotización No. ${esc(cot.codigo)} en PDF.</p>
+        <div style="background:#e8762b;border-radius:10px;padding:14px 18px;color:#fff"><span style="font-size:11px;letter-spacing:2px">TOTAL</span><br><span style="font-size:24px;font-weight:700">${total}</span></div>
+        <p style="font-size:13px;color:#555;margin:18px 0 0">Cualquier duda, respóndenos este correo. Quedamos atentos.</p>
+      </td></tr>
+    </table>
+  </div>`;
+  try {
+    await crearTransportador().sendMail({ from: process.env.GMAIL_USER, to: destinatario, subject: `Cotización ${cot.codigo}${cot.proyecto ? ` — ${cot.proyecto}` : ''} — DISERCO`, html: cuerpo, attachments: [{ filename: `cotizacion-${cot.codigo}.pdf`, content: pdfBuffer }] });
+    return { enviado: true };
+  } catch (e) {
+    return { enviado: false, motivo: e.message };
+  }
+}
