@@ -5,6 +5,7 @@ import { descargarCsv } from '../lib/csv.js';
 import { descargarPdf, imprimirTicket, verPdf } from '../lib/documentos.js';
 import { useCambiosEnVivo } from '../lib/tiempoReal.js';
 import { registrarEvento } from '../lib/eventos.js';
+import { empresaActiva } from '../lib/empresa.js';
 
 // Formas de pago de una factura, con el efectivo neto del cambio devuelto.
 function formasDePago(f) {
@@ -35,7 +36,7 @@ function ChipsPago({ factura }) {
 }
 
 export default function Facturas({ session, perfil, sucursales, filtroInicial, onFiltroInicialUsado }) {
-  const [filtros, setFiltros] = useState({ sucursal_id: '', fechaInicio: '', fechaFin: '', q: filtroInicial?.q ?? '' });
+  const [filtros, setFiltros] = useState({ sucursal_id: empresaActiva() === 'diserco' ? (sucursales?.[0]?.id ?? '') : '', fechaInicio: '', fechaFin: '', q: filtroInicial?.q ?? '' });
   const [cajeroFiltro, setCajeroFiltro] = useState('');
   const [soloAnuladas, setSoloAnuladas] = useState(false);
   const [formaFiltro, setFormaFiltro] = useState('');
