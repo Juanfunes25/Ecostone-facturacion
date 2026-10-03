@@ -7,6 +7,15 @@ const UNIDADES = ['unidad', 'kit', 'galon', 'cubeta', 'saco', 'litro', 'm2', 'ml
 const VACIO = { nombre: '', codigo: '', marca: '', categoria_id: '', presentacion: 'Kit', unidad_venta: 'kit', precio: '', costo_estandar: '', rendimiento_texto: '', controla_inventario: true, stock_minimo: '0', activo: true };
 
 // Catálogo de productos de DISERCO. Los precios van SIN ISV (el ISV se suma en la cotización).
+function Seccion({ titulo, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <h3 style={{ margin: '0 0 8px', fontSize: '0.95rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.8 }}>{titulo}</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, alignItems: 'start' }}>{children}</div>
+    </div>
+  );
+}
+
 export default function CatalogoD({ session, perfil }) {
   const [filas, setFilas] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -85,20 +94,25 @@ export default function CatalogoD({ session, perfil }) {
       </div>
       {modal && (
         <Modal titulo={modal.id ? 'Editar producto' : 'Nuevo producto'} onCerrar={() => setModal(null)} pie={<><button className="boton-md" disabled={!modal.form.nombre.trim() || modal.form.precio === ''} onClick={guardar}>Guardar</button><button className="boton-md boton-secundario" onClick={() => setModal(null)}>Cancelar</button>{modal.id && <button className="boton-md boton-peligro" onClick={eliminar}>🗑 Eliminar</button>}</>}>
-          <div className="toolbar" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <Campo etiqueta="Nombre"><input value={modal.form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej.: Epóxico Quarzo Autonivelante Top - Ivory" /></Campo>
-            <Campo etiqueta="Marca" ancho={160}><input value={modal.form.marca} onChange={(e) => set('marca', e.target.value)} placeholder="Ej.: KAIDA" /></Campo>
-            <Campo etiqueta="Código" ancho={120}><input value={modal.form.codigo} onChange={(e) => set('codigo', e.target.value)} /></Campo>
-            <Campo etiqueta="Categoría" ancho={200}><select value={modal.form.categoria_id} onChange={(e) => set('categoria_id', e.target.value)}><option value="">—</option>{categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></Campo>
-            <Campo etiqueta="Presentación" ancho={140}><input value={modal.form.presentacion} onChange={(e) => set('presentacion', e.target.value)} placeholder="Kit, galón…" /></Campo>
-            <Campo etiqueta="Unidad de venta" ancho={140}><select value={modal.form.unidad_venta} onChange={(e) => set('unidad_venta', e.target.value)}>{UNIDADES.map((u) => <option key={u}>{u}</option>)}</select></Campo>
-            <Campo etiqueta="Precio de venta (sin ISV)" ancho={170}><input type="number" step="any" min="0" value={modal.form.precio} onChange={(e) => set('precio', e.target.value)} /></Campo>
-            <Campo etiqueta="Costo (sin ISV)" ancho={150} ayuda="Se actualiza solo con las compras"><input type="number" step="0.01" min="0" value={modal.form.costo_estandar} onChange={(e) => set('costo_estandar', e.target.value)} /></Campo>
-            <Campo etiqueta="Rendimiento aproximado" ayuda="Sale en la cotización de productos"><input value={modal.form.rendimiento_texto} onChange={(e) => set('rendimiento_texto', e.target.value)} placeholder="Ej.: 15 m2 aproximadamente" /></Campo>
-            <Campo etiqueta="Mínimo en inventario" ancho={150}><input type="number" step="1" min="0" value={modal.form.stock_minimo} onChange={(e) => set('stock_minimo', e.target.value)} /></Campo>
-          </div>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}><input type="checkbox" style={{ width: 'auto' }} checked={modal.form.controla_inventario} onChange={(e) => set('controla_inventario', e.target.checked)} /> Controlar inventario (descuenta al facturar)</label>
-          {modal.id && <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}><input type="checkbox" style={{ width: 'auto' }} checked={modal.form.activo} onChange={(e) => set('activo', e.target.checked)} /> Activo</label>}
+          <Seccion titulo="1 · El producto">
+            <div style={{ gridColumn: '1 / -1' }}><Campo etiqueta="Nombre"><input value={modal.form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej.: Epóxico Quarzo Autonivelante Top - Ivory" /></Campo></div>
+            <Campo etiqueta="Categoría"><select value={modal.form.categoria_id} onChange={(e) => set('categoria_id', e.target.value)}><option value="">—</option>{categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></Campo>
+            <Campo etiqueta="Marca"><input value={modal.form.marca} onChange={(e) => set('marca', e.target.value)} placeholder="Ej.: KAIDA" /></Campo>
+            <Campo etiqueta="Código"><input value={modal.form.codigo} onChange={(e) => set('codigo', e.target.value)} /></Campo>
+            <Campo etiqueta="Presentación"><input value={modal.form.presentacion} onChange={(e) => set('presentacion', e.target.value)} placeholder="Kit, galón…" /></Campo>
+            <Campo etiqueta="Unidad de venta"><select value={modal.form.unidad_venta} onChange={(e) => set('unidad_venta', e.target.value)}>{UNIDADES.map((u) => <option key={u}>{u}</option>)}</select></Campo>
+            <div style={{ gridColumn: '1 / -1' }}><Campo etiqueta="Rendimiento aproximado (sale en la cotización)"><input value={modal.form.rendimiento_texto} onChange={(e) => set('rendimiento_texto', e.target.value)} placeholder="Ej.: 15 m2 aproximadamente" /></Campo></div>
+          </Seccion>
+          <Seccion titulo="2 · Precio y costo">
+            <Campo etiqueta="Precio de venta (sin ISV)"><input type="number" step="any" min="0" value={modal.form.precio} onChange={(e) => set('precio', e.target.value)} /></Campo>
+            <Campo etiqueta="Costo (sin ISV)"><input type="number" step="0.01" min="0" value={modal.form.costo_estandar} onChange={(e) => set('costo_estandar', e.target.value)} /></Campo>
+            <div style={{ alignSelf: 'end', paddingBottom: 10, color: 'var(--text-dim)', fontSize: '0.85em' }}>El costo se actualiza solo con las compras.</div>
+          </Seccion>
+          <Seccion titulo="3 · Inventario">
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', gridColumn: '1 / -1' }}><input type="checkbox" style={{ width: 'auto' }} checked={modal.form.controla_inventario} onChange={(e) => set('controla_inventario', e.target.checked)} /> Controlar inventario (descuenta al facturar)</label>
+            {modal.form.controla_inventario && <Campo etiqueta="Mínimo en inventario"><input type="number" step="1" min="0" value={modal.form.stock_minimo} onChange={(e) => set('stock_minimo', e.target.value)} /></Campo>}
+            {modal.id && <label style={{ display: 'flex', gap: 8, alignItems: 'center', gridColumn: '1 / -1' }}><input type="checkbox" style={{ width: 'auto' }} checked={modal.form.activo} onChange={(e) => set('activo', e.target.checked)} /> Producto activo (aparece en ventas y cotizaciones)</label>}
+          </Seccion>
         </Modal>
       )}
     </div>
