@@ -88,9 +88,9 @@ export async function pdfEnVentana(ventana, path, session) {
   }
 }
 
-export async function descargarPdf(path, session, nombreArchivo) {
+export async function descargarPdf(path, session, nombreArchivo, tipo = 'application/pdf') {
   const blob = await (await pedir(path, session)).blob();
-  const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+  const url = URL.createObjectURL(new Blob([blob], { type: tipo }));
   const a = document.createElement('a');
   a.href = url;
   a.download = nombreArchivo;

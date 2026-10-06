@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { Campo, Etiqueta } from '../components/Modal.jsx';
 import CotizacionDEditor from './CotizacionDEditor.jsx';
 import { L, num, fechaCorta } from '../lib/fmt.js';
-import { imprimirTicket, verPdf } from '../lib/documentos.js';
+import { descargarPdf, imprimirTicket, verPdf } from '../lib/documentos.js';
 import AvisoSinStock from '../components/AvisoSinStock.jsx';
 
 const ESTADOS = [['', 'Todas'], ['borrador,enviada', 'Por aprobar'], ['aprobada', 'Aprobadas (por cobrar)'], ['facturada', 'Cobradas y facturadas'], ['rechazada,anulada', 'Cerradas']];
@@ -20,6 +20,38 @@ export default function CotizacionesD({ session, perfil }) {
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const vende = ['admin', 'gerente', 'vendedor', 'ventas'].includes(perfil.rol);
+  const [importando, setImportando] = useState(false);
+
+  const aBase64 = (archivo) => new Promise((ok, mal) => {
+    const lector = new FileReader();
+    lector.onload = () => ok(String(lector.result).split(',')[1]);
+    lector.onerror = () => mal(new Error('No se pudo leer el archivo'));
+    lector.readAsDataURL(archivo);
+  });
+
+  // Sube uno o varios Excel: cada uno se lee y queda guardado como borrador.
+  async function importar(archivos) {
+    setImportando(true);
+    setError('');
+    setAviso('');
+    const hechas = [];
+    const fallas = [];
+    let ultima = null;
+    for (const archivo of archivos) {
+      try {
+        const r = await api.post('/diserco/cotizaciones/importar-excel', { nombre: archivo.name, contenido: await aBase64(archivo) }, session);
+        ultima = r.cotizacion;
+        hechas.push(`${r.cotizacion.codigo} (${r.cotizacion.nombre_cliente})${r.avisos?.length ? ` ⚠ ${r.avisos.join(' · ')}` : ''}`);
+      } catch (e) {
+        fallas.push(`${archivo.name}: ${e.message}`);
+      }
+    }
+    setImportando(false);
+    if (fallas.length) setError(`No se pudo importar:\n${fallas.join('\n')}`);
+    if (hechas.length) setAviso(`Importadas ${hechas.length}: ${hechas.join(' | ')}. Quedaron como borrador: revísalas antes de enviar.`);
+    if (hechas.length === 1 && !fallas.length) setVista({ tipo: 'detalle', id: ultima.id });
+    else cargar().catch(() => {});
+  }
 
   async function cargar() {
     const q = new URLSearchParams();
@@ -39,7 +71,8 @@ export default function CotizacionesD({ session, perfil }) {
 
   return (
     <div>
-      {error && <div className="error" onClick={() => setError('')}>{error}</div>}
+      {error && <div className="error" style={{ whiteSpace: 'pre-line' }} onClick={() => setError('')}>{error}</div>}
+      {aviso && <div className="aviso-ok" onClick={() => setAviso('')}>{aviso}</div>}
       <div className="panel">
         <h2>Cotizaciones DISERCO</h2>
         <div className="toolbar" style={{ flexWrap: 'wrap' }}>
@@ -51,6 +84,10 @@ export default function CotizacionesD({ session, perfil }) {
           <div className="toolbar" style={{ flexWrap: 'wrap' }}>
             <button className="boton-md" onClick={() => setVista({ tipo: 'editor', inicial: null, nuevoTipo: 'proyecto' })}>+ Cotización de PROYECTO</button>
             <button className="boton-md" onClick={() => setVista({ tipo: 'editor', inicial: null, nuevoTipo: 'productos' })}>+ Cotización de PRODUCTOS</button>
+            <label className="boton-md boton-secundario" style={{ cursor: importando ? 'wait' : 'pointer', opacity: importando ? 0.6 : 1 }}>
+              {importando ? 'Importando…' : '📥 Importar desde Excel'}
+              <input type="file" accept=".xlsx" multiple hidden disabled={importando} onChange={(e) => { const f = [...e.target.files]; e.target.value = ''; if (f.length) importar(f); }} />
+            </label>
           </div>
         )}
         <table className="tabla">
@@ -150,6 +187,8 @@ function Detalle({ id, session, perfil, aviso, onAviso, onVolver, onEditar }) {
         {(c.proyecto || c.ubicacion) && <p style={{ margin: '0 0 6px' }}>{c.proyecto && <strong>{c.proyecto}</strong>}{c.ubicacion && ` — ${c.ubicacion}`}</p>}
         <div className="toolbar" style={{ flexWrap: 'wrap' }}>
           <button className="boton-md boton-secundario" onClick={() => verPdf(`/diserco/cotizaciones/${c.id}/pdf`, session).catch((e) => setError(e.message))}>Ver PDF</button>
+          <button className="boton-md boton-secundario" onClick={() => descargarPdf(`/diserco/cotizaciones/${c.id}/excel`, session, `cotizacion-${c.codigo}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').catch((e) => setError(e.message))}>Descargar Excel</button>
+          {String(c.notas_internas ?? '').startsWith('Importada desde Excel') && <button className="boton-md boton-secundario" onClick={() => descargarPdf(`/diserco/cotizaciones/${c.id}/excel-original`, session, `cotizacion-${c.codigo}-original.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').catch((e) => setError(e.message))}>Excel original</button>}
           {abierta && vende && <button className="boton-md boton-secundario" onClick={() => onEditar(c)}>Editar</button>}
           {vende && <button className="boton-md boton-secundario" disabled={ocupado} onClick={() => { const email = window.prompt('¿A qué correo la enviamos?', c.email || c.clientes?.email || ''); if (email) hacer(() => post('correo', { email }), (r) => `Enviada a ${r.a}`); }}>Enviar por correo</button>}
           {abierta && vende && !c.vencida && <button className="boton-sm" style={{ background: 'var(--ok)', color: '#fff' }} disabled={ocupado} onClick={() => hacer(() => post('aprobar'), 'Cotización aprobada: ya se puede cobrar y facturar')}>✔ Aprobar</button>}

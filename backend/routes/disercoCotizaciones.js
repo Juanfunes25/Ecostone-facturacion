@@ -10,6 +10,7 @@ import { codigoCotizacion } from '../lib/disercoConfig.js';
 import { hoyHn, sumarDias } from '../lib/produccion.js';
 import { sucursalesDe } from '../lib/empresas.js';
 import { textoSeguroFiltro } from '../lib/consultas.js';
+import { leerCotizacionExcel, generarExcelCotizacion } from '../lib/cotizacionExcel.js';
 import { facturarVenta, guardarDetalle, obtenerPuntoEmisionActivo } from './ventas.js';
 
 export const disercoCotizaciones = Router();
@@ -171,6 +172,82 @@ disercoCotizaciones.get('/', requireRole(...LEE), async (req, res) => {
   }
   const hoy = hoyHn();
   res.json(data.map((c) => ({ ...c, pagado: pagado.get(c.id) ?? 0, vencida: ['borrador', 'enviada'].includes(c.estado) && c.fecha_vigencia < hoy })));
+});
+
+
+const normNombre = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+// Importa una cotización desde un Excel: la lee, la guarda como borrador con número nuevo del
+// sistema y conserva el archivo original. Body: { nombre, contenido (base64) }.
+disercoCotizaciones.post('/importar-excel', requireRole(...VENDE), async (req, res) => {
+  try {
+    const nombre = String(req.body?.nombre ?? 'cotizacion.xlsx').slice(0, 200);
+    const base64 = String(req.body?.contenido ?? '').replace(/^data:[^,]*,/, '');
+    if (!base64) throw err('No llegó el archivo');
+    const buffer = Buffer.from(base64, 'base64');
+    if (buffer.length > 8 * 1024 * 1024) throw err('El archivo es demasiado grande (máximo 8 MB)');
+    let leida;
+    try {
+      leida = await leerCotizacionExcel(buffer);
+    } catch (e) {
+      throw err(/zip|central directory|corrupt|Can't find end/i.test(e.message) ? 'El archivo no es un Excel (.xlsx) válido. Si es .xls, ábrelo y guárdalo como .xlsx.' : e.message);
+    }
+    const { tipo, meta, lineas, secciones, anticipo, firma, codigoOriginal, fechaTexto, avisos } = leida;
+
+    // Cliente: si ya existe uno con el mismo nombre (o RTN) se usa; si no, se crea.
+    let clienteId = null;
+    const rtn = String(meta.rtn ?? '').replace(/[-\s]/g, '');
+    if (/^\d{13,14}$/.test(rtn)) clienteId = (await db.from('clientes').select('id').eq('rtn', rtn).maybeSingle()).data?.id ?? null;
+    if (!clienteId) {
+      const clave = textoSeguroFiltro(meta.cliente).split(' ').slice(0, 2).join('%');
+      const { data: cands } = await db.from('clientes').select('id, nombre').ilike('nombre', `%${clave}%`).limit(40);
+      clienteId = (cands ?? []).find((c) => normNombre(c.nombre) === normNombre(meta.cliente))?.id ?? null;
+    }
+    if (!clienteId) avisos.push(`Cliente nuevo creado: ${meta.cliente}`);
+
+    // Productos: se enlaza al catálogo solo si el nombre coincide exacto.
+    let catalogo = new Map();
+    if (tipo === 'productos') {
+      const { data: prods } = await db.from('productos').select('id, nombre').eq('empresa', 'diserco').eq('activo', true).limit(2000);
+      catalogo = new Map((prods ?? []).map((p) => [normNombre(p.nombre), p.id]));
+    }
+    const body = {
+      tipo, cliente_id: clienteId, nombre_cliente: meta.cliente, rtn_cliente: rtn || null, telefono: meta.telefono, email: meta.email, contacto: meta.contacto,
+      proyecto: meta.proyecto, ubicacion: meta.ubicacion, secciones, anticipo_pct: tipo === 'proyecto' ? anticipo : 0, mostrar_bancos: true,
+      firma_nombre: firma.nombre, firma_cargo: firma.cargo, vigencia_dias: 30,
+      notas_internas: `Importada desde Excel (${nombre})${codigoOriginal ? ` · número original ${codigoOriginal}` : ''}${fechaTexto ? ` · ${fechaTexto}` : ''}`,
+      lineas: lineas.map((l) => ({ producto_id: catalogo.get(normNombre(l.descripcion)) ?? null, descripcion: l.descripcion, cantidad: l.cantidad, unidad: l.unidad || (tipo === 'proyecto' ? 'm2' : 'unidad'), precio_unitario: l.precio_unitario })),
+    };
+    // Reutiliza el guardado normal (numeración, totales, auditoría) capturando su respuesta.
+    const resultado = await new Promise((resolve, reject) => {
+      const falsa = { status(c) { this.codigo = c; return this; }, json(d) { (this.codigo >= 400 ? reject : resolve)(Object.assign(new Error(d.error ?? 'Error'), { status: this.codigo })); } };
+      guardar(Object.assign(Object.create(req), { body }), falsa).catch(reject);
+    });
+    await db.from('d_cotizacion_archivos').insert({ cotizacion_id: resultado.id, nombre, contenido: base64 });
+    await registrarAuditoria(req, { accion: 'dcotizacion.importar_excel', entidad: 'd_cotizacion', entidadId: resultado.id, sucursalId: resultado.sucursal_id, detalle: { codigo: resultado.codigo, archivo: nombre, original: codigoOriginal } });
+    res.status(201).json({ cotizacion: resultado, avisos });
+  } catch (e) {
+    fallo(res, e);
+  }
+});
+
+disercoCotizaciones.get('/:id/excel', requireRole(...LEE), async (req, res) => {
+  const cot = await cargar(req.params.id);
+  if (!cot || esAjena(req.perfil, cot)) return res.status(404).json({ error: 'Cotización no encontrada' });
+  const buf = await generarExcelCotizacion(cot);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="cotizacion-${cot.codigo}.xlsx"`);
+  res.send(buf);
+});
+
+disercoCotizaciones.get('/:id/excel-original', requireRole(...LEE), async (req, res) => {
+  const cot = await cargar(req.params.id);
+  if (!cot || esAjena(req.perfil, cot)) return res.status(404).json({ error: 'Cotización no encontrada' });
+  const { data } = await db.from('d_cotizacion_archivos').select('nombre, contenido').eq('cotizacion_id', cot.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (!data) return res.status(404).json({ error: 'Esta cotización no tiene un Excel original guardado' });
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${data.nombre.replace(/[^\w.\- ]/g, '_')}"`);
+  res.send(Buffer.from(data.contenido, 'base64'));
 });
 
 disercoCotizaciones.get('/:id', requireRole(...LEE), async (req, res) => {
