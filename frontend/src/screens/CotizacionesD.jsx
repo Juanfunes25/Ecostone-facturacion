@@ -39,7 +39,7 @@ export default function CotizacionesD({ session, perfil }) {
     let ultima = null;
     for (const archivo of archivos) {
       try {
-        const r = await api.post('/diserco/cotizaciones/importar-excel', { nombre: archivo.name, contenido: await aBase64(archivo) }, session);
+        const r = await api.post('/diserco/cotizaciones/importar-excel', session, { nombre: archivo.name, contenido: await aBase64(archivo) });
         ultima = r.cotizacion;
         hechas.push(`${r.cotizacion.codigo} (${r.cotizacion.nombre_cliente})${r.avisos?.length ? ` ⚠ ${r.avisos.join(' · ')}` : ''}`);
       } catch (e) {
