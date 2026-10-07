@@ -44,14 +44,15 @@ antifraude.post('/evento', async (req, res) => {
   if (eventosPorUsuario.size > 5000) eventosPorUsuario.clear();
   if (cuenta > 120) return res.status(429).json({ error: 'Demasiados eventos' });
 
-  await registrarAuditoria(req, {
+  // Se responde de inmediato: la bitácora se escribe después, sin hacer esperar a la pantalla.
+  res.status(204).end();
+  registrarAuditoria(req, {
     accion,
     entidad: accion.split('.')[0],
     sucursalId: sucursal_id || req.perfil.sucursal_id || null,
     detalle: limitarDetalle(detalle),
-  });
+  }).catch((e) => console.error('[evento]', e.message));
   if (accion === 'sesion.inicio' || accion === 'pantalla.ver') alertaFueraDeHorario(req, accion);
-  res.status(204).end();
 });
 
 // ── Estado del correo de alertas ────────────────────────────────────────
@@ -66,9 +67,11 @@ const ESTADOS_ALERTA = ['pendiente', 'investigando', 'resuelta', 'falso_positivo
 const ABIERTAS = ['pendiente', 'investigando'];
 
 antifraude.get('/alertas/pendientes', requireRole('admin'), async (req, res) => {
-  const { count, error } = await db.from('alertas').select('id', { count: 'exact', head: true }).in('estado', ABIERTAS);
+  const [{ count, error }, { count: ordenes }] = await Promise.all([
+    db.from('alertas').select('id', { count: 'exact', head: true }).in('estado', ABIERTAS),
+    db.from('alertas').select('id', { count: 'exact', head: true }).in('estado', ABIERTAS).eq('tipo', 'orden.estacionada'),
+  ]);
   if (error) return res.status(500).json({ error: error.message });
-  const { count: ordenes } = await db.from('alertas').select('id', { count: 'exact', head: true }).in('estado', ABIERTAS).eq('tipo', 'orden.estacionada');
   res.json({ pendientes: count ?? 0, ordenes_abiertas: ordenes ?? 0 });
 });
 

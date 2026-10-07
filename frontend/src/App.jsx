@@ -284,7 +284,7 @@ function PantallaApp({ session, onSalir }) {
         .then((r) => setAlertasPendientes(r.pendientes))
         .catch(() => {});
     revisar();
-    const t = setInterval(revisar, 60 * 1000);
+    const t = setInterval(() => { if (document.visibilityState === 'visible') revisar(); }, 60 * 1000);
     return () => clearInterval(t);
   }, [perfil?.rol, session, pantallaActiva]);
 

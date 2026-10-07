@@ -8,7 +8,7 @@ import { empresaDeLaPeticion } from '../lib/empresas.js';
 // Se recuerdan 30 s por token (y nunca más allá del vencimiento del token); al
 // cambiar usuarios se vacía la memoria para que una desactivación sea inmediata.
 const sesiones = new Map();
-const VIGENCIA_MS = 30 * 1000;
+const VIGENCIA_MS = 2 * 60 * 1000;
 export const olvidarSesiones = () => sesiones.clear();
 
 function vencimientoToken(token) {
@@ -32,29 +32,42 @@ export async function requireAuth(req, res, next) {
     return next();
   }
 
-  const { data: userData, error: userError } = await db.auth.getUser(token);
-  if (userError || !userData?.user) {
-    return res.status(401).json({ error: 'Token inválido o expirado' });
+  // Al abrir la app salen 6-8 peticiones a la vez con el mismo token: se valida UNA vez y todas comparten el resultado.
+  let pendiente = enCurso.get(token);
+  if (!pendiente) {
+    pendiente = validar(token).finally(() => enCurso.delete(token));
+    enCurso.set(token, pendiente);
   }
+  const r = await pendiente;
+  if (r.error) return res.status(r.status).json({ error: r.error });
 
-  const { data: perfil, error: perfilError } = await db
-    .from('perfiles')
-    .select('*')
-    .eq('id', userData.user.id)
-    .single();
-
-  if (perfilError || !perfil) {
-    return res.status(403).json({ error: 'Usuario sin perfil asignado' });
-  }
-  if (!perfil.activo) {
-    return res.status(403).json({ error: 'Usuario inactivo' });
-  }
-
-  req.perfil = perfil;
+  req.perfil = r.perfil;
   req.empresa = empresaDeLaPeticion(req);
-  if (sesiones.size > 500) sesiones.clear();
-  sesiones.set(token, { perfil, hasta: Math.min(Date.now() + VIGENCIA_MS, vencimientoToken(token) || 0) });
   // Dispositivo nuevo / uso simultáneo: nunca frena la petición.
   vigilarDispositivo(req).catch(() => {});
   next();
+}
+
+const enCurso = new Map();
+
+async function validar(token) {
+  // El token se verifica con la llave pública cacheada (sin viaje a Supabase); si no se puede, se pregunta a Supabase.
+  let userId = null;
+  try {
+    const { data } = await db.auth.getClaims(token);
+    userId = data?.claims?.sub ?? null;
+  } catch {
+    userId = null;
+  }
+  if (!userId) {
+    const { data: userData, error: userError } = await db.auth.getUser(token);
+    if (userError || !userData?.user) return { status: 401, error: 'Token inválido o expirado' };
+    userId = userData.user.id;
+  }
+  const { data: perfil, error: perfilError } = await db.from('perfiles').select('*').eq('id', userId).single();
+  if (perfilError || !perfil) return { status: 403, error: 'Usuario sin perfil asignado' };
+  if (!perfil.activo) return { status: 403, error: 'Usuario inactivo' };
+  if (sesiones.size > 500) sesiones.clear();
+  sesiones.set(token, { perfil, hasta: Math.min(Date.now() + VIGENCIA_MS, vencimientoToken(token) || 0) });
+  return { perfil };
 }

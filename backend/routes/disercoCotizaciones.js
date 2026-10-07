@@ -192,7 +192,7 @@ disercoCotizaciones.post('/importar-excel', requireRole(...VENDE), async (req, r
     } catch (e) {
       throw err(/zip|central directory|corrupt|Can't find end/i.test(e.message) ? 'El archivo no es un Excel (.xlsx) válido. Si es .xls, ábrelo y guárdalo como .xlsx.' : e.message);
     }
-    const { tipo, meta, lineas, secciones, anticipo, firma, codigoOriginal, fechaTexto, avisos } = leida;
+    const { tipo, meta, lineas, secciones, anticipo, firma, codigoOriginal, fechaTexto, fecha, avisos } = leida;
 
     // Cliente: si ya existe uno con el mismo nombre (o RTN) se usa; si no, se crea.
     let clienteId = null;
@@ -223,6 +223,13 @@ disercoCotizaciones.post('/importar-excel', requireRole(...VENDE), async (req, r
       const falsa = { status(c) { this.codigo = c; return this; }, json(d) { (this.codigo >= 400 ? reject : resolve)(Object.assign(new Error(d.error ?? 'Error'), { status: this.codigo })); } };
       guardar(Object.assign(Object.create(req), { body }), falsa).catch(reject);
     });
+    // Conserva la fecha original de la cotización (para que el historial y la vigencia tengan sentido).
+    if (fecha && fecha <= hoyHn()) {
+      const vig = sumarDias(fecha, 30);
+      await db.from('d_cotizaciones').update({ created_at: `${fecha}T12:00:00-06:00`, fecha_vigencia: vig }).eq('id', resultado.id);
+      resultado.created_at = `${fecha}T12:00:00-06:00`;
+      resultado.fecha_vigencia = vig;
+    }
     await db.from('d_cotizacion_archivos').insert({ cotizacion_id: resultado.id, nombre, contenido: base64 });
     await registrarAuditoria(req, { accion: 'dcotizacion.importar_excel', entidad: 'd_cotizacion', entidadId: resultado.id, sucursalId: resultado.sucursal_id, detalle: { codigo: resultado.codigo, archivo: nombre, original: codigoOriginal } });
     res.status(201).json({ cotizacion: resultado, avisos });

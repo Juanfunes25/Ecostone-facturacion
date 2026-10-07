@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
 import { requireAuth } from './middleware/auth.js';
+import { cacheLecturas } from './middleware/cacheLecturas.js';
 import { categorias } from './routes/categorias.js';
 import { productos } from './routes/productos.js';
 import { clientes } from './routes/clientes.js';
@@ -102,6 +103,8 @@ app.use('/api', (req, res, next) => {
   registrarAuditoria(req, { accion: 'acceso.denegado', entidad: 'sistema', sucursalId: req.perfil.sucursal_id ?? null, detalle: { metodo: req.method, ruta, rol: req.perfil.rol } });
   res.status(403).json({ error: 'No tiene permiso para esta acción' });
 });
+
+app.use('/api', cacheLecturas);
 
 // Perfil propio: sucursal, rol y flags (cierre ciego, sin horario)
 app.get('/api/perfil', async (req, res) => {

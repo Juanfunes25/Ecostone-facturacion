@@ -65,7 +65,7 @@ export default function NotificacionesAlertas({ session, onVer }) {
           ultimoId.current = 0;
         });
     }
-    const t = setInterval(revisar, 30 * 1000);
+    const t = setInterval(() => { if (document.visibilityState === 'visible') revisar(); }, 30 * 1000);
     return () => {
       activo = false;
       clearInterval(t);

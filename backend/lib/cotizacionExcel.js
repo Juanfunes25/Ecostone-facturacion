@@ -21,6 +21,13 @@ const numeroDe = (v) => {
   return t !== '' && Number.isFinite(Number(t)) ? Number(t) : null;
 };
 
+const MESES = { enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7, agosto: 8, septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12 };
+function parsearFecha(t) {
+  const m = norm(t).match(/(\d{1,2}) de ([a-z]+) del? (\d{4})/);
+  const mes = m && MESES[m[2]];
+  return mes ? `${m[3]}-${String(mes).padStart(2, '0')}-${m[1].padStart(2, '0')}` : null;
+}
+
 // Lee un Excel de cotización (formato DISERCO u otro parecido) y devuelve los datos
 // listos para guardar, más los avisos de lo que no se pudo leer con certeza.
 export async function leerCotizacionExcel(buffer) {
@@ -85,6 +92,7 @@ export async function leerCotizacionExcel(buffer) {
 
   // 3) Partidas hasta la fila de "Sub total"
   const lineas = [];
+  let grupo = '';
   let iFin = filas.length;
   let totalExcel = null;
   for (let i = iEnc + 1; i < filas.length; i++) {
@@ -92,11 +100,18 @@ export async function leerCotizacionExcel(buffer) {
     const porCol = Object.fromEntries(f.celdas.map((x) => [x.col, x.v]));
     const texts = f.celdas.map((x) => norm(texto(x.v)));
     if (texts.some((t) => /^sub ?total/.test(t))) { iFin = i; break; }
-    const desc = texto(porCol[cols.desc]);
+    let desc = texto(porCol[cols.desc]);
     const cant = numeroDe(porCol[cols.cant]);
     let precio = cols.precio ? numeroDe(porCol[cols.precio]) : null;
     const total = cols.total ? numeroDe(porCol[cols.total]) : null;
+    if (desc && !(cant > 0) && precio == null && total == null) {
+      // Fila de solo texto dentro de la tabla: continúa la descripción anterior (si empieza en minúscula) o es un grupo/título de las siguientes partidas.
+      if (lineas.length && /^[a-záéíóúñ(]/.test(desc)) lineas[lineas.length - 1].descripcion += ` ${desc}`;
+      else grupo = desc;
+      continue;
+    }
     if (!desc || !(cant > 0)) continue;
+    if (grupo) { desc = `${grupo}. ${desc}`; grupo = ''; }
     if (precio == null && total != null) precio = Math.round((total / cant) * 100) / 100;
     if (precio == null) { avisos.push(`Fila ${f.n}: "${desc.slice(0, 40)}…" no tiene precio; se omitió`); continue; }
     lineas.push({ descripcion: desc, cantidad: cant, unidad: texto(porCol[cols.unidad]) || null, precio_unitario: precio });
@@ -128,7 +143,14 @@ export async function leerCotizacionExcel(buffer) {
     const [a, b] = resto.slice(-2);
     if (a.length <= 50 && b.length <= 50 && !/[.:]$/.test(a) && !/[.:]$/.test(b) && !/^[a-z0-9]\)/.test(a)) { firma = { nombre: a, cargo: b }; resto.length -= 2; }
   }
+  const CONOCIDOS = /^(estructura del sistema[^:\n]*|equipo de seguridad y herramientas|forma de pago|\*?\s*no incluye[^:\n]*|ventajas de trabajar con nosotros|observaciones|comentarios adicionales|garant[ií]a de materiales|condiciones[^:\n]*)\s*:?\s*([\s\S]*)$/i;
   for (const t of resto) {
+    const conocido = t.match(CONOCIDOS);
+    if (conocido) {
+      actual = { titulo: tituloBonito(conocido[1].trim()), texto: conocido[2].trim() };
+      secciones.push(actual);
+      continue;
+    }
     const pago = t.match(/^forma de pago\s*:?\s*([\s\S]*)$/i);
     if (pago) { actual = { titulo: 'Forma de pago', texto: pago[1].trim() }; secciones.push(actual); continue; }
     if (esTitulo(t)) { actual = { titulo: tituloBonito(t.replace(/:$/, '')), texto: '' }; secciones.push(actual); continue; }
@@ -149,7 +171,9 @@ export async function leerCotizacionExcel(buffer) {
   const totalSistema = Math.round(calc * 1.15 * 100) / 100;
   if (totalExcel != null && Math.abs(totalExcel - totalSistema) > 0.05) avisos.push(`El total del Excel (L ${totalExcel.toFixed(2)}) no coincide con el calculado (L ${totalSistema.toFixed(2)}). Revisa la cotización.`);
 
-  return { tipo, meta, lineas, secciones, anticipo, firma, codigoOriginal, fechaTexto, avisos };
+  const fecha = parsearFecha(fechaTexto);
+  for (const sec of secciones) sec.texto = sec.texto.replace(/\n{3,}/g, '\n\n').trim();
+  return { tipo, meta, lineas, secciones: secciones.filter((x) => x.texto || x.titulo), anticipo, firma, codigoOriginal, fechaTexto, fecha, avisos };
 }
 
 // Genera el Excel de una cotización con el formato de DISERCO.
